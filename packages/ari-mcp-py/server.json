@@ -14,7 +14,7 @@
     {
       "registryType": "pypi",
       "registryBaseUrl": "https://pypi.org",
-      "identifier": "ari-mcp",
+      "identifier": "ari-mcp-py",
       "version": "0.1.2",
       "transport": { "type": "stdio" },
       "runtimeHint": "uvx",

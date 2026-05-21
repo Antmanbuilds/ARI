@@ -1,7 +1,7 @@
 # ARI · Agentic Rate Indicators
 
 [![npm](https://img.shields.io/npm/v/ari-mcp.svg?label=npm)](https://www.npmjs.com/package/ari-mcp)
-[![PyPI](https://img.shields.io/pypi/v/ari-mcp.svg?label=PyPI)](https://pypi.org/project/ari-mcp/)
+[![PyPI](https://img.shields.io/pypi/v/ari-mcp-py.svg?label=PyPI)](https://pypi.org/project/ari-mcp-py/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-server-7c3aed)](https://modelcontextprotocol.io)
 
@@ -93,35 +93,37 @@ mcpServers:
 
 ### Gemini CLI / ChatGPT desktop / any other MCP host
 
-`command: npx`, `args: ["-y", "ari-mcp"]`. Or, for Python-native hosts, `command: uvx`, `args: ["ari-mcp"]`.
+`command: npx`, `args: ["-y", "ari-mcp"]`. Or, for Python-native hosts, `command: uvx`, `args: ["ari-mcp-py"]`.
 
 ## Tools
 
-| Tool | What it does | Required arguments |
-| --- | --- | --- |
-| `ari_fair_price` | Returns the live fair-price band for a service in a category. | `category`, `service` |
-| `ari_leaderboard` | Returns the current leaderboard for a category, ranked by deviation from fair price. | `category` |
-| `ari_protocols` | Lists every protocol ARI tracks. | none |
-| `ari_categories` | Lists every service category ARI tracks. | none |
-| `ari_services` | Lists services in a category, with current quote stats. | `category` |
-| `ari_reports` | Returns the most recent integrity reports for a service. | `category`, `service` |
-| `ari_stats` | Returns global stats (services covered, signed receipts emitted, last update). | none |
-| `ari_ticker` | Returns a small JSON payload suitable for a live ticker widget. | none |
-| `ari_reference_rates` | Returns reference rate snapshots for a category over a time window. | `category` |
-| `ari_facilitators` | Lists known x402/MPP facilitators with current trust status. | none |
-| `ari_verify_receipt` | Verifies an Ed25519 signed receipt against the pinned publisher key. | `headers`, `body` |
-| `ari_pubkey` | Returns the current publisher key id and PEM. | none |
+| Tool | What it does |
+| --- | --- |
+| `is_fair_price` | Green / amber / red verdict for a quoted price against the live FMV band. |
+| `refuse_if_overpriced` | Convenience wrapper to call right before paying · returns `{ok, reason}`. |
+| `prepay_verdict` | Full pre-pay decision with FMV band, deviation, and a citable receipt id. |
+| `get_fmv` | Median plus low / high band and sample size for a service. |
+| `get_service` | Full detail row · sources, related services, last observation. |
+| `list_services` | Browse or filter the index by protocol or category. |
+| `get_leaderboard` | Cheapest, most expensive, biggest movers in a category. |
+| `recent_observations` | Raw observed price history for a service. |
+| `verify_receipt` | Re-verify a previously issued receipt id offline. |
+| `get_signed_receipt` | Re-fetch the signed body for a receipt id. |
+| `subscribe_alert` | Set up a webhook or email price alert for a service. |
 
-Every tool returns JSON shaped for citation · `{value, unit, asOf, source}` rather than free text. Agents that quote tool output verbatim end up with good citations for free.
+Every tool returns JSON shaped for citation rather than free text. Agents that quote tool output verbatim end up with good citations for free.
 
 ## A real tool call
 
-Asking Claude *"is the current price for OpenRouter's `anthropic/claude-3.5-sonnet` fair?"* triggers:
+Asking Claude *"is this quote fair before I pay it?"* triggers:
 
 ```json
 {
-  "tool": "ari_fair_price",
-  "arguments": { "category": "llm-inference", "service": "anthropic/claude-3.5-sonnet" }
+  "tool": "is_fair_price",
+  "arguments": {
+    "service": "openrouter/anthropic/claude-3.5-sonnet",
+    "quoted_price_usd_per_1m_input_tokens": 4.10
+  }
 }
 ```
 
@@ -129,17 +131,18 @@ and the server returns:
 
 ```json
 {
-  "category": "llm-inference",
-  "service": "anthropic/claude-3.5-sonnet",
-  "fairPrice": { "low": 2.87, "mid": 3.04, "high": 3.21, "unit": "USD per 1M input tokens" },
+  "verdict": "amber",
+  "service": "openrouter/anthropic/claude-3.5-sonnet",
+  "quoted": 4.10,
+  "fmv": { "low": 2.87, "mid": 3.04, "high": 3.21, "unit": "USD per 1M input tokens" },
+  "deviationPct": 34.9,
   "asOf": "2026-05-21T14:02:11Z",
-  "sampleSize": 47,
-  "source": "https://agentrateindicators.com/services/llm-inference/anthropic%2Fclaude-3.5-sonnet",
+  "source": "https://agentrateindicators.com/services/openrouter/anthropic%2Fclaude-3.5-sonnet",
   "receiptId": "01J5ZK8E2K7Q3R5W8X9Y0Z1A2B"
 }
 ```
 
-The agent answers the user's question and links the source. The receipt id is auditable.
+The agent now has a concrete reason to push back on the quote, plus an auditable receipt id.
 
 ## Verify a receipt yourself
 
@@ -177,7 +180,7 @@ Anyone porting `ari-mcp` to another language can work from `spec/` alone.
 | Language | Package | Source |
 | --- | --- | --- |
 | Node 18+ | [`ari-mcp` on npm](https://www.npmjs.com/package/ari-mcp) | [`packages/ari-mcp-ts`](packages/ari-mcp-ts) |
-| Python 3.10+ | [`ari-mcp` on PyPI](https://pypi.org/project/ari-mcp/) | [`packages/ari-mcp-py`](packages/ari-mcp-py) |
+| Python 3.10+ | [`ari-mcp-py` on PyPI](https://pypi.org/project/ari-mcp-py/) | [`packages/ari-mcp-py`](packages/ari-mcp-py) |
 
 Both packages share the same tool names, argument shapes, and JSON return shapes. Both ship offline receipt verification with a pinned key and an `ACCEPTED_KEY_IDS` list for graceful rotation. Both default to the public ARI API and accept `ARI_BASE_URL` to point at a private mirror.
 

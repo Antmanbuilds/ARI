@@ -1,16 +1,18 @@
-# ari-mcp · Python
+# ari-mcp-py · Python MCP server for ARI
 
-[![PyPI version](https://img.shields.io/pypi/v/ari-mcp.svg)](https://pypi.org/project/ari-mcp/)
+[![PyPI version](https://img.shields.io/pypi/v/ari-mcp-py.svg)](https://pypi.org/project/ari-mcp-py/)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-MCP server for [Agentic Rate Indicators](https://agentrateindicators.com). Gives any MCP-aware agent (Claude Desktop, Cursor, Continue, Windsurf, Zed, ChatGPT desktop, Gemini CLI) live fair-market-value lookups, leaderboards, observation history, and signed-receipt verification for x402 + MPP services.
+MCP server for [Agentic Rate Indicators](https://agentrateindicators.com). Gives any MCP-aware agent (Claude Desktop, Cursor, Continue, Windsurf, Zed, ChatGPT desktop, Gemini CLI) live fair-market-value lookups, leaderboards, observation history, and Ed25519 signed-receipt verification for x402/MPP services.
 
 ```bash
-pipx install ari-mcp
+pipx install ari-mcp-py
 ari-mcp install     # print copy-paste config blocks for popular hosts
 ```
 
-Functionally identical to [`ari-mcp` on npm](https://www.npmjs.com/package/ari-mcp). Use whichever you prefer · both expose the same 10 tools, the same JSON shapes, and verify receipts with the same Ed25519 wire format.
+Functionally identical to [`ari-mcp` on npm](https://www.npmjs.com/package/ari-mcp). Use whichever you prefer · both expose the same eleven tools, the same JSON shapes, and verify receipts with the same Ed25519 wire format.
+
+The published name differs (`ari-mcp` on npm vs `ari-mcp-py` on PyPI) only because `ari` is already taken on PyPI · the installed command, configuration, and tool surface are identical.
 
 ## Why
 
@@ -26,8 +28,8 @@ LLM agents that pay for things need a pricing oracle they can cite, not a number
 {
   "mcpServers": {
     "ari": {
-      "command": "ari-mcp",
-      "args": []
+      "command": "uvx",
+      "args": ["ari-mcp-py"]
     }
   }
 }
@@ -41,8 +43,8 @@ LLM agents that pay for things need a pricing oracle they can cite, not a number
 {
   "mcpServers": {
     "ari": {
-      "command": "ari-mcp",
-      "args": []
+      "command": "uvx",
+      "args": ["ari-mcp-py"]
     }
   }
 }
@@ -52,12 +54,13 @@ LLM agents that pay for things need a pricing oracle they can cite, not a number
 
 Run `ari-mcp install` to print the right config block for each host. Add `--client cursor` (or any other slug) to print only one.
 
-## The ten tools
+## The eleven tools
 
 | Tool | What it does |
 | --- | --- |
 | `is_fair_price` | Green/amber/red verdict for a quoted price |
 | `refuse_if_overpriced` | Convenience wrapper to call right before paying |
+| `prepay_verdict` | Full pre-pay decision · FMV band, deviation, receipt id |
 | `get_fmv` | Median plus low/high band plus sample size for a service |
 | `get_service` | Full detail row · sources, related services, last observation |
 | `list_services` | Browse or filter the index by protocol or category |
@@ -69,7 +72,7 @@ Run `ari-mcp install` to print the right config block for each host. Add `--clie
 
 ## Why signed receipts
 
-An agent that pays for things needs to trust two parties at once · the seller quoting a price, and any oracle telling it whether that price is fair. ARI signs every response with an Ed25519 key whose public half ships embedded in this client at build time. There is no first-call trust window · the very first request a fresh install makes is verified against the pinned key id `ari-aedbd75d43c8`, and any mismatch fails closed with a clear error. If the publisher rotates keys, the new id is added to an accepted-id list one release before the old one is removed, so stale installs keep verifying correctly until they upgrade.
+An agent that pays for things needs to trust two parties at once · the seller quoting a price, and any oracle telling it whether that price is fair. ARI signs every response with an Ed25519 key whose public half ships embedded in this client at build time. There is no first-call trust window · the very first request a fresh install makes is verified against the pinned key id, and any mismatch fails closed with a clear error. If the publisher rotates keys, the new id is added to an accepted-id list one release before the old one is removed, so stale installs keep verifying correctly until they upgrade.
 
 Pass `--insecure-skip-pin` to accept any key id the server returns (use this only during a rotation). Pass `--insecure-skip-verify` to skip Ed25519 verification entirely (test setups only).
 
@@ -102,8 +105,8 @@ OPTIONS
 ## Documentation
 
 - Hosted docs · [agentrateindicators.com/docs/mcp](https://agentrateindicators.com/docs/mcp)
-- Receipt format · [github.com/Antmanbuilds/ARI/blob/main/spec/signed-receipts.md](https://github.com/Antmanbuilds/ARI/blob/main/spec/signed-receipts.md)
-- OpenAPI · [github.com/Antmanbuilds/ARI/blob/main/spec/openapi.yaml](https://github.com/Antmanbuilds/ARI/blob/main/spec/openapi.yaml)
+- Receipt format · [spec/signed-receipts.md](https://github.com/Antmanbuilds/ARI/blob/main/spec/signed-receipts.md)
+- OpenAPI · [spec/openapi.yaml](https://github.com/Antmanbuilds/ARI/blob/main/spec/openapi.yaml)
 
 ## License
 

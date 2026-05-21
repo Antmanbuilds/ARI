@@ -9,7 +9,7 @@ This is a step-by-step walkthrough for verifying a receipt by hand. The referenc
 npx ari-mcp verify --url https://agentrateindicators.com/api/v1/pubkey
 
 # Python
-uvx ari-mcp verify --url https://agentrateindicators.com/api/v1/pubkey
+uvx ari-mcp-py verify --url https://agentrateindicators.com/api/v1/pubkey
 ```
 
 Both print a one-line `OK` or a structured failure with the reason.

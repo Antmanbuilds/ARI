@@ -56,12 +56,13 @@ Wire this server into your MCP host once and your agent can:
 
 Run `npx -y ari-mcp install` to print the right config block for each host. Add `--client cursor` (or any other slug) to print only one.
 
-## The ten tools
+## The eleven tools
 
 | Tool | What it does |
 | --- | --- |
 | `is_fair_price` | Green/amber/red verdict for a quoted price |
 | `refuse_if_overpriced` | Convenience wrapper to call right before paying |
+| `prepay_verdict` | Full pre-pay decision · FMV band, deviation, receipt id |
 | `get_fmv` | Median plus low/high band plus sample size for a service |
 | `get_service` | Full detail row · sources, related services, last observation |
 | `list_services` | Browse or filter the index by protocol or category |
