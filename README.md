@@ -121,8 +121,9 @@ Asking Claude *"is this quote fair before I pay it?"* triggers:
 {
   "tool": "is_fair_price",
   "arguments": {
-    "service": "openrouter/anthropic/claude-3.5-sonnet",
-    "quoted_price_usd_per_1m_input_tokens": 4.10
+    "slug": "openrouter-anthropic-claude-3-5-sonnet",
+    "amount_usd": 4.10,
+    "unit": "1m_input_tokens"
   }
 }
 ```
@@ -132,17 +133,19 @@ and the server returns:
 ```json
 {
   "verdict": "amber",
-  "service": "openrouter/anthropic/claude-3.5-sonnet",
-  "quoted": 4.10,
-  "fmv": { "low": 2.87, "mid": 3.04, "high": 3.21, "unit": "USD per 1M input tokens" },
-  "deviationPct": 34.9,
-  "asOf": "2026-05-21T14:02:11Z",
-  "source": "https://agentrateindicators.com/services/openrouter/anthropic%2Fclaude-3.5-sonnet",
-  "receiptId": "01J5ZK8E2K7Q3R5W8X9Y0Z1A2B"
+  "fmv_usd": 3.04,
+  "low_usd": 2.87,
+  "high_usd": 3.21,
+  "delta_pct": 34.9,
+  "sample_size": 47,
+  "currency": "USD",
+  "unit": "1m_input_tokens",
+  "receipt_id": "01J5ZK8E2K7Q3R5W8X9Y0Z1A2B",
+  "signed_at": "2026-05-21T14:02:11Z"
 }
 ```
 
-The agent now has a concrete reason to push back on the quote, plus an auditable receipt id.
+The agent now has a concrete reason to push back on the quote, plus an auditable receipt id. When ARI has not yet computed a baseline for a service, `verdict` is `"unknown"` and the FMV fields are `null` rather than zero · agents should treat `null` as "no opinion", never as "free".
 
 ## Verify a receipt yourself
 
@@ -182,7 +185,7 @@ Anyone porting `ari-mcp` to another language can work from `spec/` alone.
 | Node 18+ | [`ari-mcp` on npm](https://www.npmjs.com/package/ari-mcp) | [`packages/ari-mcp-ts`](packages/ari-mcp-ts) |
 | Python 3.10+ | [`ari-mcp-py` on PyPI](https://pypi.org/project/ari-mcp-py/) | [`packages/ari-mcp-py`](packages/ari-mcp-py) |
 
-Both packages share the same tool names, argument shapes, and JSON return shapes. Both ship offline receipt verification with a pinned key and an `ACCEPTED_KEY_IDS` list for graceful rotation. Both default to the public ARI API and accept `ARI_BASE_URL` to point at a private mirror.
+Both packages share the same tool names, argument shapes, and JSON return shapes. Both ship offline receipt verification with a pinned key and an `ACCEPTED_KEY_IDS` list for graceful rotation. Both default to the public ARI API and accept `ARI_API_BASE_URL` to point at a private mirror.
 
 ## Security
 

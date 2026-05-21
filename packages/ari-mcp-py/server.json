@@ -20,7 +20,7 @@
       "runtimeHint": "uvx",
       "environmentVariables": [
         {
-          "name": "ARI_BASE_URL",
+          "name": "ARI_API_BASE_URL",
           "description": "Override the ARI API base URL. Defaults to https://agentrateindicators.com/api.",
           "isRequired": false,
           "isSecret": false
