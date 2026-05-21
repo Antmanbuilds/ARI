@@ -1,11 +1,10 @@
-openapi: 3.1.0
+openapi: 3.0.3
 info:
   title: ARI · Agentic Rate Indicators
-  summary: Live fair-market-value lookups, leaderboards, and Ed25519 signed-receipt verification for x402/MPP services.
   description: >-
     Public read-only HTTP API for ARI. Every JSON response on `/api/*` is signed with an Ed25519 receipt · see
     `spec/signed-receipts.md` for the wire format and `spec/verification.md` for a step-by-step verifier. The reference
-    MCP clients (`ari-mcp` on npm and PyPI) wrap these endpoints as tools any MCP-aware agent can call.
+    MCP clients (`ari-mcp` on npm and `ari-mcp-py` on PyPI) wrap these endpoints as tools any MCP-aware agent can call.
   version: 0.1.2
   license:
     name: Apache-2.0
@@ -44,6 +43,8 @@ paths:
               $ref: '#/components/headers/AriSignature'
             Ari-Signed-At:
               $ref: '#/components/headers/AriSignedAt'
+        4XX:
+          $ref: '#/components/responses/Error'
       summary: List service categories
       tags:
         - discovery
@@ -129,6 +130,8 @@ paths:
               $ref: '#/components/headers/AriSignature'
             Ari-Signed-At:
               $ref: '#/components/headers/AriSignedAt'
+        4XX:
+          $ref: '#/components/responses/Error'
       summary: Health check
       tags:
         - health
@@ -192,6 +195,8 @@ paths:
               $ref: '#/components/headers/AriSignature'
             Ari-Signed-At:
               $ref: '#/components/headers/AriSignedAt'
+        4XX:
+          $ref: '#/components/responses/Error'
       summary: Movers, gainers, losers, and bargains
       tags:
         - market
@@ -219,6 +224,8 @@ paths:
               $ref: '#/components/headers/AriSignature'
             Ari-Signed-At:
               $ref: '#/components/headers/AriSignedAt'
+        4XX:
+          $ref: '#/components/responses/Error'
       summary: Supported payment protocols
       tags:
         - discovery
@@ -303,6 +310,8 @@ paths:
               $ref: '#/components/headers/AriSignature'
             Ari-Signed-At:
               $ref: '#/components/headers/AriSignedAt'
+        4XX:
+          $ref: '#/components/responses/Error'
       summary: Per-category price inflation, weekly buckets
       tags:
         - analytics
@@ -328,6 +337,8 @@ paths:
               $ref: '#/components/headers/AriSignature'
             Ari-Signed-At:
               $ref: '#/components/headers/AriSignedAt'
+        4XX:
+          $ref: '#/components/responses/Error'
       summary: x402 vs MPP · share, spread and momentum
       tags:
         - analytics
@@ -426,6 +437,8 @@ paths:
               $ref: '#/components/headers/AriSignature'
             Ari-Signed-At:
               $ref: '#/components/headers/AriSignedAt'
+        4XX:
+          $ref: '#/components/responses/Error'
       summary: List indexed services
       tags:
         - discovery
@@ -502,6 +515,8 @@ paths:
               $ref: '#/components/headers/AriSignature'
             Ari-Signed-At:
               $ref: '#/components/headers/AriSignedAt'
+        4XX:
+          $ref: '#/components/responses/Error'
       summary: Daily price history (FMV) for a service
       tags:
         - pricing
@@ -543,6 +558,8 @@ paths:
               $ref: '#/components/headers/AriSignature'
             Ari-Signed-At:
               $ref: '#/components/headers/AriSignedAt'
+        4XX:
+          $ref: '#/components/responses/Error'
       summary: Recent price observations for a service
       tags:
         - pricing
@@ -569,6 +586,8 @@ paths:
               $ref: '#/components/headers/AriSignature'
             Ari-Signed-At:
               $ref: '#/components/headers/AriSignedAt'
+        4XX:
+          $ref: '#/components/responses/Error'
       summary: Global market statistics
       tags:
         - market
@@ -616,6 +635,8 @@ paths:
               $ref: '#/components/headers/AriSignature'
             Ari-Signed-At:
               $ref: '#/components/headers/AriSignedAt'
+        4XX:
+          $ref: '#/components/responses/Error'
       summary: Latest price observations across the index
       tags:
         - market
@@ -647,6 +668,8 @@ paths:
               $ref: '#/components/headers/AriSignature'
             Ari-Signed-At:
               $ref: '#/components/headers/AriSignedAt'
+        4XX:
+          $ref: '#/components/responses/Error'
       summary: Public x402 facilitator (settlement-gateway) index
       tags:
         - analytics
@@ -681,6 +704,8 @@ paths:
               $ref: '#/components/headers/AriSignature'
             Ari-Signed-At:
               $ref: '#/components/headers/AriSignedAt'
+        4XX:
+          $ref: '#/components/responses/Error'
       summary: Facilitators with sub-threshold success rates
       tags:
         - analytics
@@ -721,6 +746,8 @@ paths:
               $ref: '#/components/headers/AriSignature'
             Ari-Signed-At:
               $ref: '#/components/headers/AriSignedAt'
+        4XX:
+          $ref: '#/components/responses/Error'
       summary: Live on-chain settlement counters across all facilitators
       tags:
         - analytics
@@ -786,6 +813,8 @@ paths:
               $ref: '#/components/headers/AriSignature'
             Ari-Signed-At:
               $ref: '#/components/headers/AriSignedAt'
+        4XX:
+          $ref: '#/components/responses/Error'
       summary: Get the publisher's signing public key
       tags:
         - receipts
@@ -818,6 +847,8 @@ paths:
               $ref: '#/components/headers/AriSignature'
             Ari-Signed-At:
               $ref: '#/components/headers/AriSignedAt'
+        4XX:
+          $ref: '#/components/responses/Error'
       summary: List the v0 named reference rates (draft-ari-x402-fmv-00)
       tags:
         - receipts
@@ -905,6 +936,8 @@ paths:
               $ref: '#/components/headers/AriSignature'
             Ari-Signed-At:
               $ref: '#/components/headers/AriSignedAt'
+        4XX:
+          $ref: '#/components/responses/Error'
       summary: Get historical daily fixings for a reference rate
       tags:
         - receipts
@@ -949,6 +982,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/RegistryListing'
           description: Registry listing
+        4XX:
+          $ref: '#/components/responses/Error'
       summary: List service-owner mappings
       tags:
         - registry
@@ -977,6 +1012,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/RegistryLeaderboard'
           description: Leaderboard
+        4XX:
+          $ref: '#/components/responses/Error'
       summary: Vendor honesty leaderboard
       tags:
         - registry
@@ -1098,6 +1135,8 @@ paths:
               $ref: '#/components/headers/AriSignature'
             Ari-Signed-At:
               $ref: '#/components/headers/AriSignedAt'
+        4XX:
+          $ref: '#/components/responses/Error'
       summary: Get the receipt canonicalization spec
       tags:
         - receipts
@@ -1217,6 +1256,8 @@ paths:
               $ref: '#/components/headers/AriSignature'
             Ari-Signed-At:
               $ref: '#/components/headers/AriSignedAt'
+        4XX:
+          $ref: '#/components/responses/Error'
       summary: Stateless verification of a body + signature
       tags:
         - receipts
@@ -1498,6 +1539,7 @@ components:
             facilitator:
               allOf:
                 - $ref: '#/components/schemas/FacilitatorRecommendation'
+              type: object
               description: |
                 Recommended x402 facilitator for this service, picked from
                 facilitators that settled this service in the last 7 days
@@ -2623,3 +2665,63 @@ components:
         - claimedAt
         - ingestedAt
       type: object
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Stable error code (e.g. `not_found`, `bad_request`, `rate_limited`).
+        message:
+          type: string
+          description: Human-readable description suitable for logging.
+        requestId:
+          type: string
+          description: Echoed request id for support correlation.
+  headers:
+    AriCanonicalHash:
+      description: Hex SHA-256 of the canonical (JCS) body bytes.
+      schema:
+        pattern: ^[0-9a-f]{64}$
+        type: string
+    AriKeyId:
+      description: |
+        Stable id of the signing key, of the form `ari-<sha256(SPKI DER)[0..12]>`.
+        A change here means the key rotated; cross-check against
+        `/.well-known/ari-pubkey.pem`.
+      schema:
+        pattern: ^ari-[0-9a-f]{12}$
+        type: string
+    AriReceiptId:
+      description: |
+        ULID · short, sortable, citable receipt id. Re-fetchable for 90 days
+        via `GET /v1/verify-receipt?receipt_id=…`.
+      schema:
+        type: string
+    AriReferenceRate:
+      description: |
+        Signed reference-rate quote per draft-ari-x402-fmv-00 §3. Format:
+        `<rate-id>; value=<usd-micros>; band-low=<usd-micros>;
+        band-high=<usd-micros>; ts="<rfc3339>"; sig="<base64>"; key-id="<ari-…>";
+        method="<url>"`. May appear multiple times when several rates are quoted.
+      schema:
+        type: string
+    AriSignature:
+      description: |
+        Base64-encoded Ed25519 signature over the JCS-canonical body plus the
+        signed-header preamble (see `/v1/spec/canonicalization`).
+      schema:
+        type: string
+    AriSignedAt:
+      description: RFC 3339 timestamp at which the server signed the receipt.
+      schema:
+        format: date-time
+        type: string
+  responses:
+    Error:
+      description: Error response. `error` is a stable machine code · `message` is a human-readable string.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
