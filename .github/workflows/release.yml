@@ -54,7 +54,7 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: packages/ari-mcp-py/dist
-          attestations: true
+          password: ${{ secrets.PYPI_TOKEN }}
 
   mcp-registry:
     name: Publish to MCP registry
