@@ -1,0 +1,31 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "io.github.Antmanbuilds/ari-mcp",
+  "description": "Live fair-market-value lookups, leaderboards, and Ed25519 signed-receipt verification for x402/MPP services. Lets any MCP-aware agent answer 'is this API price fair' and 'is this receipt real' without trusting the caller.",
+  "status": "active",
+  "repository": {
+    "url": "https://github.com/Antmanbuilds/ARI",
+    "source": "github",
+    "subfolder": "packages/ari-mcp-ts"
+  },
+  "version": "0.1.2",
+  "websiteUrl": "https://agentrateindicators.com/docs/mcp",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "ari-mcp",
+      "version": "0.1.2",
+      "transport": { "type": "stdio" },
+      "runtimeHint": "npx",
+      "environmentVariables": [
+        {
+          "name": "ARI_BASE_URL",
+          "description": "Override the ARI API base URL. Defaults to https://agentrateindicators.com/api.",
+          "isRequired": false,
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+[console_scripts]
+ari-mcp = ari_mcp.cli:main

@@ -1,0 +1,56 @@
+name: Bug report
+description: Something is broken in the Node client, Python client, or wire spec
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. The more reproducible the report, the faster the fix.
+
+        For security issues, do not file a public issue · see [SECURITY.md](../../SECURITY.md).
+  - type: dropdown
+    id: package
+    attributes:
+      label: Which package
+      options:
+        - ari-mcp (Node, npm)
+        - ari-mcp (Python, PyPI)
+        - spec (OpenAPI or receipt format)
+        - other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Package version
+      placeholder: "0.1.2"
+    validations:
+      required: true
+  - type: input
+    id: host
+    attributes:
+      label: MCP host (if relevant)
+      placeholder: "Claude Desktop 0.7.4, Cursor 0.40, Continue, Windsurf, Zed, ChatGPT desktop, Gemini CLI, custom"
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you do, what did you expect, what did you get
+      placeholder: |
+        Steps to reproduce:
+        1. ...
+        2. ...
+
+        Expected:
+        ...
+
+        Actual:
+        ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Paste any relevant tool output or host-side log lines. Scrub anything sensitive first.
+      render: text

@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ari-mcp"
+version = "0.1.2"
+description = "MCP server for ARI (Agentic Rate Indicators). Live fair-market-value lookups, leaderboards, and signed-receipt verification for x402/MPP services · usable from any MCP-aware agent (Claude Desktop, Cursor, Continue, Windsurf, Zed, ChatGPT desktop, Gemini CLI)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Agentic Rate Indicators" }]
+keywords = ["mcp", "model-context-protocol", "ari", "x402", "mpp", "fair-price", "agentic-payments"]
+classifiers = [
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Software Development :: Libraries",
+]
+dependencies = [
+  "mcp>=1.2.0",
+  "httpx>=0.27",
+  "cryptography>=41",
+  "pydantic>=2.5",
+]
+
+[project.optional-dependencies]
+http = [
+  "uvicorn>=0.30",
+  "starlette>=0.37",
+]
+
+[project.urls]
+Homepage = "https://agentrateindicators.com/docs/mcp"
+Source = "https://github.com/Antmanbuilds/ARI"
+Issues = "https://github.com/Antmanbuilds/ARI/issues"
+Changelog = "https://github.com/Antmanbuilds/ARI/blob/main/CHANGELOG.md"
+Documentation = "https://agentrateindicators.com/docs/mcp"
+
+[project.scripts]
+ari-mcp = "ari_mcp.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

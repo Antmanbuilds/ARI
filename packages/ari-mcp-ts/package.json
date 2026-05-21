@@ -1,0 +1,80 @@
+{
+  "name": "ari-mcp",
+  "version": "0.1.2",
+  "description": "MCP server for ARI (Agentic Rate Indicators). Gives any MCP-aware agent (Claude Desktop, Cursor, Continue, Windsurf, Zed, ChatGPT desktop, Gemini CLI) live fair-market-value lookups, leaderboards, and signed-receipt verification for x402/MPP services.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "dist-cjs/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist-cjs/index.js"
+    },
+    "./tools": {
+      "types": "./dist/tools/index.d.ts",
+      "import": "./dist/tools/index.js",
+      "require": "./dist-cjs/tools/index.js"
+    }
+  },
+  "bin": {
+    "ari-mcp": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "dist-cjs",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && node -e \"require('fs').writeFileSync('dist-cjs/package.json', JSON.stringify({type:'commonjs'}))\" && node -e \"require('fs').chmodSync('dist/cli.js', 0o755)\"",
+    "test": "node --import tsx --test test/*.test.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ari",
+    "agentic-rate-indicators",
+    "x402",
+    "mpp",
+    "fair-price",
+    "price-oracle",
+    "signed-receipts",
+    "agentic-payments",
+    "claude",
+    "cursor",
+    "continue",
+    "windsurf",
+    "zed",
+    "gemini"
+  ],
+  "homepage": "https://agentrateindicators.com/docs/mcp",
+  "bugs": {
+    "url": "https://github.com/Antmanbuilds/ARI/issues"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/Antmanbuilds"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Antmanbuilds/ARI.git",
+    "directory": "packages/ari-mcp-ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "@noble/ed25519": "^2.3.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.0"
+  }
+}

@@ -1,0 +1,27 @@
+name: Feature request
+description: Propose a new tool, a new install snippet, or an API addition
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Feature requests for the MCP client or wire spec are welcome. Requests that depend on changes to the internal methodology or scraper layer are out of scope here · open them as a discussion instead.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is the user trying to do that they can't do today
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What you want added or changed. Be specific.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Anything you've already ruled out and why

@@ -1,0 +1,2625 @@
+openapi: 3.1.0
+info:
+  title: ARI · Agentic Rate Indicators
+  summary: Live fair-market-value lookups, leaderboards, and Ed25519 signed-receipt verification for x402/MPP services.
+  description: >-
+    Public read-only HTTP API for ARI. Every JSON response on `/api/*` is signed with an Ed25519 receipt · see
+    `spec/signed-receipts.md` for the wire format and `spec/verification.md` for a step-by-step verifier. The reference
+    MCP clients (`ari-mcp` on npm and PyPI) wrap these endpoints as tools any MCP-aware agent can call.
+  version: 0.1.2
+  license:
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+  contact:
+    name: ARI
+    url: https://agentrateindicators.com
+    email: security@agenticrates.org
+servers:
+  - url: https://agentrateindicators.com/api
+    description: Production
+externalDocs:
+  description: Docs and MCP install snippets
+  url: https://agentrateindicators.com/docs/mcp
+paths:
+  /categories:
+    get:
+      operationId: listCategories
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Category'
+                type: array
+          description: Categories
+          headers:
+            Ari-Canonical-Hash:
+              $ref: '#/components/headers/AriCanonicalHash'
+            Ari-Key-Id:
+              $ref: '#/components/headers/AriKeyId'
+            Ari-Receipt-Id:
+              $ref: '#/components/headers/AriReceiptId'
+            Ari-Signature:
+              $ref: '#/components/headers/AriSignature'
+            Ari-Signed-At:
+              $ref: '#/components/headers/AriSignedAt'
+      summary: List service categories
+      tags:
+        - discovery
+      x-ari-receipt: true
+  /fair-price:
+    get:
+      description: |
+        Returns the current FMV band for a service+unit, plus an optional
+        traffic-light verdict if a candidate price is supplied.
+      operationId: getFairPrice
+      parameters:
+        - description: Service slug
+          in: query
+          name: service
+          required: true
+          schema:
+            type: string
+        - description: Pricing unit (e.g. "1k_input_tokens"). Defaults to the service's primary unit.
+          in: query
+          name: unit
+          required: false
+          schema:
+            type: string
+        - description: Optional candidate price in micro-units of `currency` to grade against the FMV.
+          in: query
+          name: amount_micros
+          required: false
+          schema:
+            format: int64
+            type: integer
+        - in: query
+          name: currency
+          required: false
+          schema:
+            default: USD
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FairPrice'
+          description: Fair price
+          headers:
+            Ari-Canonical-Hash:
+              $ref: '#/components/headers/AriCanonicalHash'
+            Ari-Key-Id:
+              $ref: '#/components/headers/AriKeyId'
+            Ari-Receipt-Id:
+              $ref: '#/components/headers/AriReceiptId'
+            Ari-Signature:
+              $ref: '#/components/headers/AriSignature'
+            Ari-Signed-At:
+              $ref: '#/components/headers/AriSignedAt'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          description: Service or unit not found
+      summary: Fair Market Value oracle
+      tags:
+        - pricing
+      x-ari-receipt: true
+  /healthz:
+    get:
+      operationId: healthCheck
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+          description: Healthy
+          headers:
+            Ari-Canonical-Hash:
+              $ref: '#/components/headers/AriCanonicalHash'
+            Ari-Key-Id:
+              $ref: '#/components/headers/AriKeyId'
+            Ari-Receipt-Id:
+              $ref: '#/components/headers/AriReceiptId'
+            Ari-Signature:
+              $ref: '#/components/headers/AriSignature'
+            Ari-Signed-At:
+              $ref: '#/components/headers/AriSignedAt'
+      summary: Health check
+      tags:
+        - health
+      x-ari-receipt: true
+  /leaderboard:
+    get:
+      operationId: getLeaderboard
+      parameters:
+        - in: query
+          name: metric
+          required: false
+          schema:
+            default: cheapest
+            enum:
+              - cheapest
+              - most_expensive
+              - most_volatile
+              - biggest_drop
+              - biggest_jump
+              - most_observed
+            type: string
+        - in: query
+          name: category
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: limit
+          required: false
+          schema:
+            default: 10
+            maximum: 50
+            minimum: 1
+            type: integer
+        - description: |
+            When set, only score services whose most recent observation is
+            within the given number of hours. Services that have never been
+            observed are excluded.
+          in: query
+          name: maxStalenessHours
+          required: false
+          schema:
+            maximum: 8760
+            minimum: 1
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaderboardResponse'
+          description: Leaderboard
+          headers:
+            Ari-Canonical-Hash:
+              $ref: '#/components/headers/AriCanonicalHash'
+            Ari-Key-Id:
+              $ref: '#/components/headers/AriKeyId'
+            Ari-Receipt-Id:
+              $ref: '#/components/headers/AriReceiptId'
+            Ari-Signature:
+              $ref: '#/components/headers/AriSignature'
+            Ari-Signed-At:
+              $ref: '#/components/headers/AriSignedAt'
+      summary: Movers, gainers, losers, and bargains
+      tags:
+        - market
+      x-ari-receipt: true
+  /protocols:
+    get:
+      operationId: listProtocols
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Protocol'
+                type: array
+          description: Protocols
+          headers:
+            Ari-Canonical-Hash:
+              $ref: '#/components/headers/AriCanonicalHash'
+            Ari-Key-Id:
+              $ref: '#/components/headers/AriKeyId'
+            Ari-Receipt-Id:
+              $ref: '#/components/headers/AriReceiptId'
+            Ari-Signature:
+              $ref: '#/components/headers/AriSignature'
+            Ari-Signed-At:
+              $ref: '#/components/headers/AriSignedAt'
+      summary: Supported payment protocols
+      tags:
+        - discovery
+      x-ari-receipt: true
+  /reports:
+    post:
+      description: |
+        Community-submitted price observation. Stored as `pending` until reviewed.
+        Rate-limited per IP.
+      operationId: submitPriceReport
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PriceReportInput'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceReport'
+          description: Created
+          headers:
+            Ari-Canonical-Hash:
+              $ref: '#/components/headers/AriCanonicalHash'
+            Ari-Key-Id:
+              $ref: '#/components/headers/AriKeyId'
+            Ari-Receipt-Id:
+              $ref: '#/components/headers/AriReceiptId'
+            Ari-Signature:
+              $ref: '#/components/headers/AriSignature'
+            Ari-Signed-At:
+              $ref: '#/components/headers/AriSignedAt'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          description: Validation error
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          description: Too many requests
+      summary: Submit an observed price report
+      tags:
+        - reports
+      x-ari-receipt: true
+  /reports/inflation:
+    get:
+      description: |
+        For the last `weeks` ISO weeks, computes the median observation price
+        (across all services) per category per week, plus a headline
+        month-over-month change.
+      operationId: getInflationReport
+      parameters:
+        - in: query
+          name: weeks
+          required: false
+          schema:
+            default: 13
+            maximum: 52
+            minimum: 4
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InflationReport'
+          description: Inflation report
+          headers:
+            Ari-Canonical-Hash:
+              $ref: '#/components/headers/AriCanonicalHash'
+            Ari-Key-Id:
+              $ref: '#/components/headers/AriKeyId'
+            Ari-Receipt-Id:
+              $ref: '#/components/headers/AriReceiptId'
+            Ari-Signature:
+              $ref: '#/components/headers/AriSignature'
+            Ari-Signed-At:
+              $ref: '#/components/headers/AriSignedAt'
+      summary: Per-category price inflation, weekly buckets
+      tags:
+        - analytics
+      x-ari-receipt: true
+  /reports/protocol-wars:
+    get:
+      operationId: getProtocolWarsReport
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProtocolWarsReport'
+          description: Protocol wars report
+          headers:
+            Ari-Canonical-Hash:
+              $ref: '#/components/headers/AriCanonicalHash'
+            Ari-Key-Id:
+              $ref: '#/components/headers/AriKeyId'
+            Ari-Receipt-Id:
+              $ref: '#/components/headers/AriReceiptId'
+            Ari-Signature:
+              $ref: '#/components/headers/AriSignature'
+            Ari-Signed-At:
+              $ref: '#/components/headers/AriSignedAt'
+      summary: x402 vs MPP · share, spread and momentum
+      tags:
+        - analytics
+      x-ari-receipt: true
+  /services:
+    get:
+      operationId: listServices
+      parameters:
+        - description: Filter by category slug
+          in: query
+          name: category
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: protocol
+          required: false
+          schema:
+            enum:
+              - x402
+              - mpp
+              - both
+            type: string
+        - description: Search across name, vendor, description
+          in: query
+          name: q
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: sort
+          required: false
+          schema:
+            default: name
+            enum:
+              - name
+              - fmv_asc
+              - fmv_desc
+              - recent
+              - volatility
+              - freshest
+              - stale
+            type: string
+        - description: |
+            When set, only return services whose most recent observation is
+            within the given number of hours. Services that have never been
+            observed are excluded.
+          in: query
+          name: maxStalenessHours
+          required: false
+          schema:
+            maximum: 8760
+            minimum: 1
+            type: integer
+        - description: |
+            Filter to services whose published `chains[]` array contains
+            this chain identifier (e.g. `base`, `base-sepolia`,
+            `polygon`). Case-sensitive; matched against the strings the
+            upstream catalogs (x402scan, agentic.market, Coinbase
+            facilitator) publish.
+          in: query
+          name: chain
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: limit
+          required: false
+          schema:
+            default: 50
+            maximum: 200
+            minimum: 1
+            type: integer
+        - in: query
+          name: offset
+          required: false
+          schema:
+            default: 0
+            minimum: 0
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceList'
+          description: Services
+          headers:
+            Ari-Canonical-Hash:
+              $ref: '#/components/headers/AriCanonicalHash'
+            Ari-Key-Id:
+              $ref: '#/components/headers/AriKeyId'
+            Ari-Receipt-Id:
+              $ref: '#/components/headers/AriReceiptId'
+            Ari-Signature:
+              $ref: '#/components/headers/AriSignature'
+            Ari-Signed-At:
+              $ref: '#/components/headers/AriSignedAt'
+      summary: List indexed services
+      tags:
+        - discovery
+      x-ari-receipt: true
+  /services/{slug}:
+    get:
+      operationId: getService
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceDetail'
+          description: Service detail
+          headers:
+            Ari-Canonical-Hash:
+              $ref: '#/components/headers/AriCanonicalHash'
+            Ari-Key-Id:
+              $ref: '#/components/headers/AriKeyId'
+            Ari-Receipt-Id:
+              $ref: '#/components/headers/AriReceiptId'
+            Ari-Signature:
+              $ref: '#/components/headers/AriSignature'
+            Ari-Signed-At:
+              $ref: '#/components/headers/AriSignedAt'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          description: Not found
+      summary: Get a service by slug
+      tags:
+        - discovery
+      x-ari-receipt: true
+  /services/{slug}/history:
+    get:
+      operationId: getServicePriceHistory
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: days
+          required: false
+          schema:
+            default: 30
+            maximum: 90
+            minimum: 1
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceHistory'
+          description: History
+          headers:
+            Ari-Canonical-Hash:
+              $ref: '#/components/headers/AriCanonicalHash'
+            Ari-Key-Id:
+              $ref: '#/components/headers/AriKeyId'
+            Ari-Receipt-Id:
+              $ref: '#/components/headers/AriReceiptId'
+            Ari-Signature:
+              $ref: '#/components/headers/AriSignature'
+            Ari-Signed-At:
+              $ref: '#/components/headers/AriSignedAt'
+      summary: Daily price history (FMV) for a service
+      tags:
+        - pricing
+      x-ari-receipt: true
+  /services/{slug}/observations:
+    get:
+      operationId: listServiceObservations
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: limit
+          required: false
+          schema:
+            default: 100
+            maximum: 500
+            minimum: 1
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Observation'
+                type: array
+          description: Observations
+          headers:
+            Ari-Canonical-Hash:
+              $ref: '#/components/headers/AriCanonicalHash'
+            Ari-Key-Id:
+              $ref: '#/components/headers/AriKeyId'
+            Ari-Receipt-Id:
+              $ref: '#/components/headers/AriReceiptId'
+            Ari-Signature:
+              $ref: '#/components/headers/AriSignature'
+            Ari-Signed-At:
+              $ref: '#/components/headers/AriSignedAt'
+      summary: Recent price observations for a service
+      tags:
+        - pricing
+      x-ari-receipt: true
+  /stats:
+    get:
+      description: Aggregate counts and last-indexed timestamps across the index.
+      operationId: getMarketStats
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketStats'
+          description: Stats
+          headers:
+            Ari-Canonical-Hash:
+              $ref: '#/components/headers/AriCanonicalHash'
+            Ari-Key-Id:
+              $ref: '#/components/headers/AriKeyId'
+            Ari-Receipt-Id:
+              $ref: '#/components/headers/AriReceiptId'
+            Ari-Signature:
+              $ref: '#/components/headers/AriSignature'
+            Ari-Signed-At:
+              $ref: '#/components/headers/AriSignedAt'
+      summary: Global market statistics
+      tags:
+        - market
+      x-ari-receipt: true
+  /ticker:
+    get:
+      description: Compact rows for a scrolling price ticker.
+      operationId: getTicker
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            default: 60
+            maximum: 200
+            minimum: 1
+            type: integer
+        - description: |
+            When set, only include services whose most recent observation is
+            within the given number of hours.
+          in: query
+          name: maxStalenessHours
+          required: false
+          schema:
+            maximum: 8760
+            minimum: 1
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/TickerRow'
+                type: array
+          description: Ticker
+          headers:
+            Ari-Canonical-Hash:
+              $ref: '#/components/headers/AriCanonicalHash'
+            Ari-Key-Id:
+              $ref: '#/components/headers/AriKeyId'
+            Ari-Receipt-Id:
+              $ref: '#/components/headers/AriReceiptId'
+            Ari-Signature:
+              $ref: '#/components/headers/AriSignature'
+            Ari-Signed-At:
+              $ref: '#/components/headers/AriSignedAt'
+      summary: Latest price observations across the index
+      tags:
+        - market
+      x-ari-receipt: true
+  /v1/facilitators:
+    get:
+      description: |
+        Returns every tracked x402 facilitator alongside its 7-day
+        observed metrics · settled-tx count, success rate, median
+        settlement latency, median fee and 24h/7d volume. Metrics are
+        `null` when no transactions have been observed in the window
+        (clients should render "·", never a fake-precise `0`).
+      operationId: listFacilitators
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FacilitatorIndex'
+          description: Facilitator index
+          headers:
+            Ari-Canonical-Hash:
+              $ref: '#/components/headers/AriCanonicalHash'
+            Ari-Key-Id:
+              $ref: '#/components/headers/AriKeyId'
+            Ari-Receipt-Id:
+              $ref: '#/components/headers/AriReceiptId'
+            Ari-Signature:
+              $ref: '#/components/headers/AriSignature'
+            Ari-Signed-At:
+              $ref: '#/components/headers/AriSignedAt'
+      summary: Public x402 facilitator (settlement-gateway) index
+      tags:
+        - analytics
+      x-ari-receipt: true
+  /v1/facilitators/hall-of-shame:
+    get:
+      operationId: getFacilitatorHallOfShame
+      parameters:
+        - in: query
+          name: threshold
+          required: false
+          schema:
+            default: 0.97
+            maximum: 1
+            minimum: 0
+            type: number
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FacilitatorHallOfShame'
+          description: Hall of Shame entries
+          headers:
+            Ari-Canonical-Hash:
+              $ref: '#/components/headers/AriCanonicalHash'
+            Ari-Key-Id:
+              $ref: '#/components/headers/AriKeyId'
+            Ari-Receipt-Id:
+              $ref: '#/components/headers/AriReceiptId'
+            Ari-Signature:
+              $ref: '#/components/headers/AriSignature'
+            Ari-Signed-At:
+              $ref: '#/components/headers/AriSignedAt'
+      summary: Facilitators with sub-threshold success rates
+      tags:
+        - analytics
+      x-ari-receipt: true
+  /v1/facilitators/live-summary:
+    get:
+      description: |
+        Aggregated counters from the Base on-chain indexer. `txCount24h` and
+        `volume24hMicros` cover the last 24 hours of observed USDC
+        settlements; `facilitatorsActive24h` is the number of distinct
+        facilitators whose tracked EOAs submitted at least one settlement
+        in the same window. `txCount7d` and `facilitatorsActive7d` mirror
+        those counters over a 7-day window; the 7d framing exists because
+        24h windows on Base today are sparse enough that an honest
+        `1 / 7 active 24h` reading routinely looks broken when in fact it
+        just reflects a quiet day. `lastObservedAt` is the timestamp of
+        the most recent observed tx (`null` when none).
+
+        All values are honest: when the indexer has no observations the
+        fields are `null` (or `0` for counts) and the UI renders an
+        explicit "no data yet" state, never a fabricated price.
+      operationId: getFacilitatorsLiveSummary
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FacilitatorsLiveSummary'
+          description: Live settlement summary
+          headers:
+            Ari-Canonical-Hash:
+              $ref: '#/components/headers/AriCanonicalHash'
+            Ari-Key-Id:
+              $ref: '#/components/headers/AriKeyId'
+            Ari-Receipt-Id:
+              $ref: '#/components/headers/AriReceiptId'
+            Ari-Signature:
+              $ref: '#/components/headers/AriSignature'
+            Ari-Signed-At:
+              $ref: '#/components/headers/AriSignedAt'
+      summary: Live on-chain settlement counters across all facilitators
+      tags:
+        - analytics
+      x-ari-receipt: true
+  /v1/facilitators/{slug}:
+    get:
+      operationId: getFacilitator
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FacilitatorSummary'
+          description: Facilitator detail
+          headers:
+            Ari-Canonical-Hash:
+              $ref: '#/components/headers/AriCanonicalHash'
+            Ari-Key-Id:
+              $ref: '#/components/headers/AriKeyId'
+            Ari-Receipt-Id:
+              $ref: '#/components/headers/AriReceiptId'
+            Ari-Signature:
+              $ref: '#/components/headers/AriSignature'
+            Ari-Signed-At:
+              $ref: '#/components/headers/AriSignedAt'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          description: Facilitator not found
+      summary: Detail view for a single facilitator
+      tags:
+        - analytics
+      x-ari-receipt: true
+  /v1/pubkey:
+    get:
+      description: |
+        Returns the current Ed25519 public key (PEM + DER + key id +
+        fingerprint). Mirrors `/.well-known/ari-pubkey.json`.
+      operationId: getReceiptPublicKey
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Public key metadata
+          headers:
+            Ari-Canonical-Hash:
+              $ref: '#/components/headers/AriCanonicalHash'
+            Ari-Key-Id:
+              $ref: '#/components/headers/AriKeyId'
+            Ari-Receipt-Id:
+              $ref: '#/components/headers/AriReceiptId'
+            Ari-Signature:
+              $ref: '#/components/headers/AriSignature'
+            Ari-Signed-At:
+              $ref: '#/components/headers/AriSignedAt'
+      summary: Get the publisher's signing public key
+      tags:
+        - receipts
+      x-ari-receipt: true
+  /v1/reference-rates:
+    get:
+      description: |
+        Returns all five v0 reference rates with their current value, band,
+        basket, and constituents. Each priced rate also appears as an
+        `Ari-Reference-Rate` header (one per priced rate) so that callers
+        can verify the rate without parsing the body.
+      operationId: listReferenceRates
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferenceRatesList'
+          description: Reference rates fixings
+          headers:
+            Ari-Canonical-Hash:
+              $ref: '#/components/headers/AriCanonicalHash'
+            Ari-Key-Id:
+              $ref: '#/components/headers/AriKeyId'
+            Ari-Receipt-Id:
+              $ref: '#/components/headers/AriReceiptId'
+            Ari-Reference-Rate:
+              $ref: '#/components/headers/AriReferenceRate'
+            Ari-Signature:
+              $ref: '#/components/headers/AriSignature'
+            Ari-Signed-At:
+              $ref: '#/components/headers/AriSignedAt'
+      summary: List the v0 named reference rates (draft-ari-x402-fmv-00)
+      tags:
+        - receipts
+      x-ari-receipt: true
+  /v1/reference-rates/{id}:
+    get:
+      operationId: getReferenceRate
+      parameters:
+        - description: One of `ARI-X402-COMPUTE-1`, `ARI-X402-SEARCH-1`, `ARI-X402-SCRAPE-1`, `ARI-MPP-COMPUTE-1`, `ARI-MPP-DATA-1`
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferenceRateResponse'
+          description: Reference rate value
+          headers:
+            Ari-Canonical-Hash:
+              $ref: '#/components/headers/AriCanonicalHash'
+            Ari-Key-Id:
+              $ref: '#/components/headers/AriKeyId'
+            Ari-Receipt-Id:
+              $ref: '#/components/headers/AriReceiptId'
+            Ari-Reference-Rate:
+              $ref: '#/components/headers/AriReferenceRate'
+            Ari-Signature:
+              $ref: '#/components/headers/AriSignature'
+            Ari-Signed-At:
+              $ref: '#/components/headers/AriSignedAt'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          description: Unknown rate id
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          description: Basket empty (no service snapshots yet)
+      summary: Get a single reference rate
+      tags:
+        - receipts
+      x-ari-receipt: true
+  /v1/reference-rates/{id}/history:
+    get:
+      operationId: getReferenceRateHistory
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: days
+          required: false
+          schema:
+            default: 30
+            maximum: 90
+            minimum: 1
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferenceRateHistoryResponse'
+          description: Historical fixings
+          headers:
+            Ari-Canonical-Hash:
+              $ref: '#/components/headers/AriCanonicalHash'
+            Ari-Key-Id:
+              $ref: '#/components/headers/AriKeyId'
+            Ari-Receipt-Id:
+              $ref: '#/components/headers/AriReceiptId'
+            Ari-Reference-Rate:
+              $ref: '#/components/headers/AriReferenceRate'
+            Ari-Signature:
+              $ref: '#/components/headers/AriSignature'
+            Ari-Signed-At:
+              $ref: '#/components/headers/AriSignedAt'
+      summary: Get historical daily fixings for a reference rate
+      tags:
+        - receipts
+      x-ari-receipt: true
+  /v1/registry:
+    get:
+      description: |
+        Returns DNS-verified service owners (vendors who have proven control of
+        the service's domain via a `_ari-verify.<domain>` TXT record), plus any
+        pending, expired, or revoked claims.
+      operationId: listRegistry
+      parameters:
+        - in: query
+          name: status
+          required: false
+          schema:
+            enum:
+              - pending
+              - verified
+              - expired
+              - revoked
+            type: string
+        - in: query
+          name: limit
+          required: false
+          schema:
+            default: 200
+            maximum: 500
+            minimum: 1
+            type: integer
+        - in: query
+          name: offset
+          required: false
+          schema:
+            default: 0
+            minimum: 0
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistryListing'
+          description: Registry listing
+      summary: List service-owner mappings
+      tags:
+        - registry
+      x-ari-receipt: true
+  /v1/registry/leaderboard:
+    get:
+      description: |
+        Per-vendor view of attestation activity in the last 30 days, plus the
+        share of vendor-attested prices that fell within ±10% of the FMV at
+        the same moment. Higher attestation count and higher agreement
+        percentage = a more honest, more useful vendor.
+      operationId: getRegistryLeaderboard
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            default: 50
+            maximum: 100
+            minimum: 1
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistryLeaderboard'
+          description: Leaderboard
+      summary: Vendor honesty leaderboard
+      tags:
+        - registry
+      x-ari-receipt: true
+  /v1/registry/observations:
+    post:
+      description: |
+        The signed payload is the JCS canonicalization of
+        `{serviceSlug, unitCode, amountMicros, currency, claimedAt[, windowStart, windowEnd, notes]}`.
+        The signature must verify under the registered vendor key for the slug
+        and the slug's claim must be currently `verified`.
+      operationId: ingestRegistryObservation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignedObservationInput'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                properties:
+                  observation:
+                    $ref: '#/components/schemas/VendorObservation'
+                required:
+                  - observation
+                type: object
+          description: Observation ingested
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          description: Invalid body
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          description: Signature did not verify
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          description: Slug claim is pending, expired, or revoked
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          description: No registered owner for slug
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          description: Too many requests
+      summary: Submit a vendor-signed price observation
+      tags:
+        - registry
+      x-ari-receipt: true
+  /v1/registry/{slug}:
+    get:
+      description: |
+        Returns the stored ownership record, the vendor's most recent
+        attestations, and the live DNS lookup result so reviewers can verify
+        the proof end-to-end.
+      operationId: getRegistryEntry
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistryEntryDetail'
+          description: Entry detail
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          description: No claim for slug
+      summary: Inspect a single registry entry
+      tags:
+        - registry
+      x-ari-receipt: true
+  /v1/spec/canonicalization:
+    get:
+      description: |
+        Machine-readable description of how response bodies are canonicalized
+        under the `ari-receipts/v1` profile of JCS (RFC 8785), and which
+        headers participate in the signing input. The `ariProfileNotes`
+        field on the response enumerates every place the profile extends
+        or constrains strict RFC 8785.
+      operationId: getReceiptCanonicalizationSpec
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Spec
+          headers:
+            Ari-Canonical-Hash:
+              $ref: '#/components/headers/AriCanonicalHash'
+            Ari-Key-Id:
+              $ref: '#/components/headers/AriKeyId'
+            Ari-Receipt-Id:
+              $ref: '#/components/headers/AriReceiptId'
+            Ari-Signature:
+              $ref: '#/components/headers/AriSignature'
+            Ari-Signed-At:
+              $ref: '#/components/headers/AriSignedAt'
+      summary: Get the receipt canonicalization spec
+      tags:
+        - receipts
+      x-ari-receipt: true
+  /v1/verify-receipt:
+    get:
+      operationId: lookupReceipt
+      parameters:
+        - description: ULID from the `Ari-Receipt-Id` header
+          in: query
+          name: receipt_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+          description: Receipt
+          headers:
+            Ari-Canonical-Hash:
+              $ref: '#/components/headers/AriCanonicalHash'
+            Ari-Key-Id:
+              $ref: '#/components/headers/AriKeyId'
+            Ari-Receipt-Id:
+              $ref: '#/components/headers/AriReceiptId'
+            Ari-Signature:
+              $ref: '#/components/headers/AriSignature'
+            Ari-Signed-At:
+              $ref: '#/components/headers/AriSignedAt'
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+          description: Receipt not found (older than retention window)
+      summary: Re-fetch a previously emitted receipt by ULID
+      tags:
+        - receipts
+      x-ari-receipt: true
+    post:
+      description: |
+        Send a JSON body and the matching `Ari-*` header values; the server
+        recomposes the signing input and verifies it against either the
+        currently-loaded key or a caller-supplied PEM. This is the primitive
+        the in-browser widget on `/transparency` uses.
+      operationId: verifyReceiptInline
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                body:
+                  description: Either a canonical JSON string OR a JS value to be canonicalized
+                  oneOf:
+                    - type: string
+                    - type: object
+                    - items: {}
+                      type: array
+                contentType:
+                  type: string
+                keyId:
+                  type: string
+                license:
+                  type: string
+                publicKeyPem:
+                  description: Optional historical key; defaults to the current server key
+                  type: string
+                receiptId:
+                  type: string
+                signature:
+                  description: base64-encoded Ed25519 signature
+                  type: string
+                signedAt:
+                  type: string
+              required:
+                - body
+                - signature
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                properties:
+                  canonicalHash:
+                    type: string
+                  errors:
+                    items:
+                      type: string
+                    type: array
+                  serverFingerprint:
+                    type: string
+                  serverKeyId:
+                    type: string
+                  serverKeyMatches:
+                    nullable: true
+                    type: boolean
+                  valid:
+                    type: boolean
+                required:
+                  - valid
+                  - errors
+                type: object
+          description: Verification result
+          headers:
+            Ari-Canonical-Hash:
+              $ref: '#/components/headers/AriCanonicalHash'
+            Ari-Key-Id:
+              $ref: '#/components/headers/AriKeyId'
+            Ari-Receipt-Id:
+              $ref: '#/components/headers/AriReceiptId'
+            Ari-Signature:
+              $ref: '#/components/headers/AriSignature'
+            Ari-Signed-At:
+              $ref: '#/components/headers/AriSignedAt'
+      summary: Stateless verification of a body + signature
+      tags:
+        - receipts
+      x-ari-receipt: true
+components:
+  schemas:
+    ApiError:
+      properties:
+        detail:
+          type: string
+        error:
+          type: string
+      required:
+        - error
+      type: object
+    Category:
+      properties:
+        description:
+          type: string
+        name:
+          type: string
+        servicesIndexed:
+          type: integer
+        slug:
+          type: string
+      required:
+        - slug
+        - name
+        - servicesIndexed
+      type: object
+    FacilitatorChainMetrics:
+      properties:
+        chain:
+          type: string
+        facilitatorSlug:
+          type: string
+        lastTxAt:
+          format: date-time
+          nullable: true
+          type: string
+        medianFeeMicros:
+          format: int64
+          nullable: true
+          type: integer
+        medianSettleMs:
+          nullable: true
+          type: integer
+        successCount7d:
+          type: integer
+        successRate:
+          description: |
+            Observed success rate over the last 7 days. `null` when no tx
+            were observed; clients render "·".
+          nullable: true
+          type: number
+        txCount7d:
+          type: integer
+        uniqueServices7d:
+          type: integer
+        volume24hMicros:
+          format: int64
+          type: integer
+        volume7dMicros:
+          format: int64
+          type: integer
+        windowDays:
+          type: integer
+      required:
+        - facilitatorSlug
+        - chain
+        - windowDays
+        - txCount7d
+        - successCount7d
+        - volume24hMicros
+        - volume7dMicros
+        - uniqueServices7d
+      type: object
+    FacilitatorHallOfShame:
+      properties:
+        entries:
+          items:
+            $ref: '#/components/schemas/FacilitatorHallOfShameEntry'
+          type: array
+        generatedAt:
+          format: date-time
+          type: string
+        threshold:
+          type: number
+      required:
+        - generatedAt
+        - threshold
+        - entries
+      type: object
+    FacilitatorHallOfShameEntry:
+      properties:
+        chain:
+          type: string
+        medianSettleMs:
+          nullable: true
+          type: integer
+        name:
+          type: string
+        operator:
+          type: string
+        slug:
+          type: string
+        successRate:
+          type: number
+        txCount7d:
+          type: integer
+      required:
+        - slug
+        - name
+        - operator
+        - chain
+        - txCount7d
+        - successRate
+      type: object
+    FacilitatorIndex:
+      properties:
+        generatedAt:
+          format: date-time
+          type: string
+        items:
+          items:
+            $ref: '#/components/schemas/FacilitatorSummary'
+          type: array
+        total:
+          type: integer
+        windowDays:
+          type: integer
+      required:
+        - generatedAt
+        - windowDays
+        - total
+        - items
+      type: object
+    FacilitatorRecommendation:
+      properties:
+        chain:
+          type: string
+        medianFeeMicros:
+          format: int64
+          nullable: true
+          type: integer
+        medianSettleMs:
+          nullable: true
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        successRate:
+          type: number
+      required:
+        - slug
+        - name
+        - successRate
+        - chain
+      type: object
+    FacilitatorSummary:
+      properties:
+        chains:
+          items:
+            type: string
+          type: array
+        chainsBreakdown:
+          items:
+            $ref: '#/components/schemas/FacilitatorChainMetrics'
+          type: array
+        description:
+          nullable: true
+          type: string
+        docsUrl:
+          nullable: true
+          type: string
+        homepage:
+          nullable: true
+          type: string
+        lastTxAt:
+          format: date-time
+          nullable: true
+          type: string
+        medianFeeMicros:
+          format: int64
+          nullable: true
+          type: integer
+        medianSettleMs:
+          nullable: true
+          type: integer
+        name:
+          type: string
+        operator:
+          type: string
+        slug:
+          type: string
+        status:
+          enum:
+            - live
+            - beta
+            - deprecated
+            - unknown
+          type: string
+        successRate:
+          nullable: true
+          type: number
+        txCount7d:
+          type: integer
+        uniqueServices7d:
+          type: integer
+        volume24hMicros:
+          format: int64
+          type: integer
+        volume7dMicros:
+          format: int64
+          type: integer
+      required:
+        - slug
+        - name
+        - operator
+        - chains
+        - status
+        - txCount7d
+        - volume24hMicros
+        - volume7dMicros
+        - uniqueServices7d
+        - chainsBreakdown
+      type: object
+    FacilitatorsLiveSummary:
+      properties:
+        chain:
+          description: Chain the indexer is reading from (currently 'base').
+          type: string
+        facilitatorsActive24h:
+          description: Distinct facilitators with at least one observed tx in the last 24h.
+          type: integer
+        facilitatorsActive7d:
+          description: Distinct facilitators with at least one observed tx in the last 7d.
+          type: integer
+        facilitatorsTracked:
+          description: Total facilitators in the catalog.
+          type: integer
+        generatedAt:
+          format: date-time
+          type: string
+        indexerEnabled:
+          description: Whether the on-chain indexer is configured (RPC creds present).
+          type: boolean
+        lastObservedAt:
+          description: Timestamp of the most recent observed settlement. `null` when none.
+          format: date-time
+          nullable: true
+          type: string
+        txCount24h:
+          description: USDC settlements observed in the last 24h. 0 when no observations.
+          type: integer
+        txCount7d:
+          description: USDC settlements observed in the last 7d. 0 when no observations.
+          type: integer
+        volume24hMicros:
+          description: Sum of settlement amounts in USDC micro-units over the last 24h. `null` when no observations.
+          format: int64
+          nullable: true
+          type: integer
+      required:
+        - generatedAt
+        - chain
+        - txCount24h
+        - txCount7d
+        - facilitatorsActive24h
+        - facilitatorsActive7d
+        - facilitatorsTracked
+        - indexerEnabled
+      type: object
+    FairPrice:
+      allOf:
+        - $ref: '#/components/schemas/FairPriceSummary'
+        - properties:
+            facilitator:
+              allOf:
+                - $ref: '#/components/schemas/FacilitatorRecommendation'
+              description: |
+                Recommended x402 facilitator for this service, picked from
+                facilitators that settled this service in the last 7 days
+                with ≥99% observed success at the lowest median fee.
+                `null` when no facilitator has observed transactions for
+                the cohort yet.
+              nullable: true
+            service:
+              $ref: '#/components/schemas/Service'
+            verdict:
+              description: Present only when amount_micros is supplied.
+              properties:
+                deltaPct:
+                  description: (amount - fmv) / fmv * 100
+                  type: number
+                label:
+                  enum:
+                    - green
+                    - amber
+                    - red
+                  type: string
+                rationale:
+                  type: string
+                score:
+                  description: 'Normalized score: 0 = at FMV, +/- = std deviations from FMV'
+                  type: number
+              required:
+                - label
+                - score
+                - deltaPct
+              type: object
+          type: object
+    FairPriceProvenance:
+      description: |
+        Per-source breakdown of which observations contributed to the FMV
+        window. The four counts sum to `sampleSize`. `vendorCount` reflects
+        attestations from DNS-verified service owners only · pending,
+        expired, or revoked vendors are silently excluded.
+      properties:
+        discoveryCount:
+          minimum: 0
+          type: integer
+        probeCount:
+          minimum: 0
+          type: integer
+        reportCount:
+          minimum: 0
+          type: integer
+        vendorCount:
+          minimum: 0
+          type: integer
+      required:
+        - probeCount
+        - discoveryCount
+        - reportCount
+        - vendorCount
+      type: object
+    FairPriceSummary:
+      properties:
+        change24hPct:
+          description: |
+            24h percentage change vs the previous 24h window. `null` means we
+            don't have a comparison observation in the matching prior window
+            yet · clients should render "·" rather than a fake-precise 0.00%.
+            A real `0` means the prior window did contain observations and
+            the median is unchanged.
+          nullable: true
+          type: number
+        change7dPct:
+          description: |
+            7d percentage change vs the previous 7d window. Same null
+            semantics as `change24hPct`.
+          nullable: true
+          type: number
+        currency:
+          type: string
+        fmvMicros:
+          description: Median observed price in micro-units
+          format: int64
+          type: integer
+        highMicros:
+          description: Upper band (FMV + 1.5*MAD)
+          format: int64
+          type: integer
+        lowMicros:
+          description: Lower band (FMV - 1.5*MAD)
+          format: int64
+          type: integer
+        maxMicros:
+          format: int64
+          type: integer
+        minMicros:
+          format: int64
+          type: integer
+        provenance:
+          $ref: '#/components/schemas/FairPriceProvenance'
+        sampleSize:
+          type: integer
+        unitCode:
+          type: string
+        updatedAt:
+          format: date-time
+          type: string
+        windowDays:
+          type: integer
+      required:
+        - unitCode
+        - currency
+        - fmvMicros
+        - lowMicros
+        - highMicros
+        - sampleSize
+        - updatedAt
+      type: object
+    HealthStatus:
+      properties:
+        status:
+          type: string
+      required:
+        - status
+      type: object
+    InflationCategorySeries:
+      properties:
+        categoryName:
+          type: string
+        categorySlug:
+          type: string
+        points:
+          items:
+            properties:
+              fmvMicros:
+                format: int64
+                type: integer
+              sampleSize:
+                type: integer
+              weekStart:
+                format: date
+                type: string
+            required:
+              - weekStart
+              - fmvMicros
+              - sampleSize
+            type: object
+          type: array
+      required:
+        - categorySlug
+        - categoryName
+        - points
+      type: object
+    InflationReport:
+      properties:
+        categories:
+          items:
+            $ref: '#/components/schemas/InflationCategorySeries'
+          type: array
+        generatedAt:
+          format: date-time
+          type: string
+        headlineMomPct:
+          description: Sample-count-weighted MoM change across all categories (last 4 weeks vs prior 4 weeks)
+          type: number
+        weeks:
+          type: integer
+      required:
+        - weeks
+        - generatedAt
+        - headlineMomPct
+        - categories
+      type: object
+    LeaderboardEntry:
+      properties:
+        deltaPct:
+          description: |
+            24h percentage change for the entry. `null` when we don't have a
+            comparison observation in the prior 24h window · clients should
+            render "·" rather than a fake-precise 0.00%.
+          nullable: true
+          type: number
+        label:
+          description: Human-readable formatted value
+          type: string
+        service:
+          $ref: '#/components/schemas/Service'
+        value:
+          description: Numeric value for the chosen metric
+          type: number
+      required:
+        - service
+        - value
+        - label
+      type: object
+    LeaderboardResponse:
+      properties:
+        entries:
+          items:
+            $ref: '#/components/schemas/LeaderboardEntry'
+          type: array
+        total:
+          description: >-
+            Total number of services that match the chosen filters and have a fair-price summary, before the limit is
+            applied.
+          type: integer
+      required:
+        - total
+        - entries
+      type: object
+    MarketStats:
+      properties:
+        categories:
+          type: integer
+        lastIndexedAt:
+          format: date-time
+          type: string
+        movers:
+          properties:
+            gainers:
+              items:
+                $ref: '#/components/schemas/LeaderboardEntry'
+              type: array
+            losers:
+              items:
+                $ref: '#/components/schemas/LeaderboardEntry'
+              type: array
+            period:
+              description: |
+                Timeframe of the change being shown. Defaults to 24h, but
+                falls back to 7d when 24h shows no real movement across the
+                index so the homepage panel never collapses to all-zero rows.
+              enum:
+                - 24h
+                - 7d
+              type: string
+          required:
+            - period
+            - gainers
+            - losers
+          type: object
+        observations:
+          type: integer
+        protocols:
+          items:
+            properties:
+              count:
+                type: integer
+              id:
+                enum:
+                  - x402
+                  - mpp
+                type: string
+            required:
+              - id
+              - count
+            type: object
+          type: array
+        reports:
+          type: integer
+        servicesIndexed:
+          type: integer
+      required:
+        - servicesIndexed
+        - observations
+        - categories
+        - lastIndexedAt
+        - protocols
+      type: object
+    Observation:
+      properties:
+        amountMicros:
+          format: int64
+          type: integer
+        currency:
+          type: string
+        facilitator:
+          description: |
+            Optional facilitator provenance · the payment facilitator
+            that routed this quote (e.g. `coinbase-facilitator`,
+            `agentic-market`). Omitted for direct probes, community
+            reports, and synthetic-bootstrap rows.
+          type: string
+        id:
+          type: string
+        notes:
+          type: string
+        observedAt:
+          format: date-time
+          type: string
+        reporter:
+          type: string
+        serviceSlug:
+          type: string
+        source:
+          enum:
+            - catalog
+            - discovery
+            - probe
+            - report
+            - synthetic-bootstrap
+          type: string
+        sourceUrl:
+          type: string
+        tier:
+          description: e.g. standard, batch, priority
+          type: string
+        unitCode:
+          type: string
+      required:
+        - id
+        - serviceSlug
+        - unitCode
+        - amountMicros
+        - currency
+        - observedAt
+        - source
+      type: object
+    PriceHistory:
+      properties:
+        currency:
+          type: string
+        points:
+          items:
+            properties:
+              date:
+                format: date
+                type: string
+              fmvMicros:
+                format: int64
+                type: integer
+              highMicros:
+                format: int64
+                type: integer
+              lowMicros:
+                format: int64
+                type: integer
+              sampleSize:
+                type: integer
+            required:
+              - date
+              - fmvMicros
+              - sampleSize
+            type: object
+          type: array
+        serviceSlug:
+          type: string
+        unitCode:
+          type: string
+      required:
+        - serviceSlug
+        - unitCode
+        - currency
+        - points
+      type: object
+    PriceReport:
+      allOf:
+        - $ref: '#/components/schemas/PriceReportInput'
+        - properties:
+            createdAt:
+              format: date-time
+              type: string
+            id:
+              type: string
+            status:
+              enum:
+                - pending
+                - accepted
+                - rejected
+              type: string
+          required:
+            - id
+            - status
+            - createdAt
+          type: object
+    PriceReportInput:
+      properties:
+        amountMicros:
+          format: int64
+          minimum: 1
+          type: integer
+        currency:
+          default: USD
+          type: string
+        notes:
+          maxLength: 600
+          type: string
+        reporter:
+          maxLength: 80
+          type: string
+        serviceSlug:
+          minLength: 1
+          type: string
+        sourceUrl:
+          type: string
+        tier:
+          maxLength: 40
+          type: string
+        unitCode:
+          minLength: 1
+          type: string
+      required:
+        - serviceSlug
+        - unitCode
+        - amountMicros
+      type: object
+    PricingUnit:
+      properties:
+        basis:
+          enum:
+            - token
+            - request
+            - image
+            - byte
+            - second
+            - embedding
+            - search
+            - page
+          type: string
+        code:
+          description: e.g. 1k_input_tokens, request, image, gb_egress, second
+          type: string
+        denominator:
+          description: Quantity per quote, e.g. 1000 for per-1k-tokens
+          type: integer
+        label:
+          type: string
+      required:
+        - code
+        - label
+        - basis
+      type: object
+    Protocol:
+      properties:
+        description:
+          type: string
+        homepage:
+          type: string
+        id:
+          enum:
+            - x402
+            - mpp
+          type: string
+        name:
+          type: string
+        servicesIndexed:
+          type: integer
+        settlement:
+          description: e.g. USDC on Base, ACH/Card via Stripe, Tempo L1
+          type: string
+        sponsor:
+          type: string
+        transport:
+          description: e.g. HTTP 402, JSON-RPC over HTTPS
+          type: string
+      required:
+        - id
+        - name
+        - description
+        - sponsor
+        - homepage
+        - transport
+      type: object
+    ProtocolWarsObservationDay:
+      properties:
+        date:
+          format: date
+          type: string
+        mpp:
+          type: integer
+        x402:
+          type: integer
+      required:
+        - date
+        - x402
+        - mpp
+      type: object
+    ProtocolWarsReport:
+      properties:
+        generatedAt:
+          format: date-time
+          type: string
+        observationsByDay:
+          items:
+            $ref: '#/components/schemas/ProtocolWarsObservationDay'
+          type: array
+        share:
+          items:
+            $ref: '#/components/schemas/ProtocolWarsShare'
+          type: array
+        spreadByCategory:
+          items:
+            $ref: '#/components/schemas/ProtocolWarsSpread'
+          type: array
+      required:
+        - generatedAt
+        - share
+        - spreadByCategory
+        - observationsByDay
+      type: object
+    ProtocolWarsShare:
+      properties:
+        protocol:
+          enum:
+            - x402
+            - mpp
+          type: string
+        services:
+          type: integer
+      required:
+        - protocol
+        - services
+      type: object
+    ProtocolWarsSpread:
+      properties:
+        categoryName:
+          type: string
+        categorySlug:
+          type: string
+        mppMicros:
+          format: int64
+          nullable: true
+          type: integer
+        spreadMicros:
+          description: Signed price spread x402 - MPP per category, in micros. Null if either side missing.
+          format: int64
+          nullable: true
+          type: integer
+        x402Micros:
+          format: int64
+          nullable: true
+          type: integer
+      required:
+        - categorySlug
+        - categoryName
+        - x402Micros
+        - mppMicros
+        - spreadMicros
+      type: object
+    ReferenceRate:
+      properties:
+        bandHighMicros:
+          format: int64
+          type: integer
+        bandLowMicros:
+          format: int64
+          type: integer
+        basketSize:
+          type: integer
+        constituents:
+          items:
+            $ref: '#/components/schemas/ReferenceRateConstituent'
+          type: array
+        description:
+          type: string
+        fixedAt:
+          format: date-time
+          type: string
+        id:
+          description: Stable rate id, e.g. ARI-X402-COMPUTE-1
+          type: string
+        methodologyUrl:
+          type: string
+        name:
+          type: string
+        protocol:
+          enum:
+            - x402
+            - mpp
+          type: string
+        unit:
+          type: string
+        valueMicros:
+          format: int64
+          type: integer
+      required:
+        - id
+        - name
+        - protocol
+        - unit
+        - description
+        - methodologyUrl
+        - valueMicros
+        - bandLowMicros
+        - bandHighMicros
+        - basketSize
+        - fixedAt
+        - constituents
+      type: object
+    ReferenceRateConstituent:
+      properties:
+        fmvMicros:
+          format: int64
+          type: integer
+        sampleSize:
+          type: integer
+        serviceName:
+          type: string
+        serviceSlug:
+          type: string
+      required:
+        - serviceSlug
+        - serviceName
+        - fmvMicros
+        - sampleSize
+      type: object
+    ReferenceRateHistoryPoint:
+      properties:
+        bandHighMicros:
+          format: int64
+          type: integer
+        bandLowMicros:
+          format: int64
+          type: integer
+        basketSize:
+          type: integer
+        fixedAt:
+          description: RFC3339 timestamp of the daily fixing event.
+          format: date-time
+          type: string
+        valueMicros:
+          format: int64
+          type: integer
+      required:
+        - fixedAt
+        - valueMicros
+        - bandLowMicros
+        - bandHighMicros
+        - basketSize
+      type: object
+    ReferenceRateHistoryResponse:
+      properties:
+        days:
+          type: integer
+        history:
+          items:
+            $ref: '#/components/schemas/ReferenceRateHistoryPoint'
+          type: array
+        rateId:
+          type: string
+        spec:
+          example: draft-ari-x402-fmv-00
+          type: string
+      required:
+        - spec
+        - rateId
+        - days
+        - history
+      type: object
+    ReferenceRateResponse:
+      properties:
+        rate:
+          $ref: '#/components/schemas/ReferenceRate'
+        spec:
+          example: draft-ari-x402-fmv-00
+          type: string
+      required:
+        - spec
+        - rate
+      type: object
+    ReferenceRatesList:
+      properties:
+        publishedAt:
+          format: date-time
+          type: string
+        rates:
+          items:
+            $ref: '#/components/schemas/ReferenceRate'
+          type: array
+        spec:
+          example: draft-ari-x402-fmv-00
+          type: string
+      required:
+        - spec
+        - publishedAt
+        - rates
+      type: object
+    RegistryEntryDetail:
+      properties:
+        dnsProof:
+          properties:
+            error:
+              nullable: true
+              type: string
+            ok:
+              type: boolean
+            records:
+              items:
+                type: string
+              type: array
+          required:
+            - ok
+            - records
+          type: object
+        owner:
+          $ref: '#/components/schemas/ServiceOwner'
+        recentObservations:
+          items:
+            $ref: '#/components/schemas/VendorObservation'
+          type: array
+      required:
+        - owner
+        - recentObservations
+        - dnsProof
+      type: object
+    RegistryLeaderboard:
+      properties:
+        entries:
+          items:
+            $ref: '#/components/schemas/RegistryLeaderboardEntry'
+          type: array
+      required:
+        - entries
+      type: object
+    RegistryLeaderboardEntry:
+      properties:
+        agreementPct:
+          description: Share of attestations within ±10% of FMV.
+          type: number
+        attestationCount:
+          type: integer
+        attestationCount30d:
+          type: integer
+        domain:
+          type: string
+        freshestAt:
+          format: date-time
+          nullable: true
+          type: string
+        slug:
+          type: string
+        status:
+          enum:
+            - pending
+            - verified
+            - expired
+            - revoked
+          type: string
+        vendorKeyId:
+          type: string
+        verifiedAt:
+          format: date-time
+          nullable: true
+          type: string
+      required:
+        - slug
+        - domain
+        - vendorKeyId
+        - attestationCount
+        - attestationCount30d
+        - agreementPct
+        - status
+      type: object
+    RegistryListing:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/ServiceOwner'
+          type: array
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+      required:
+        - items
+        - total
+        - limit
+        - offset
+      type: object
+    Service:
+      properties:
+        address:
+          description: |
+            On-chain settlement address surfaced by the upstream catalog.
+            Omitted when no catalog has published one for this service.
+          type: string
+        category:
+          type: string
+        categoryName:
+          type: string
+        chains:
+          description: |
+            Settlement chains the vendor accepts (e.g. `["base",
+            "base-sepolia"]`). Sourced from public catalogs (x402scan,
+            agentic.market, Coinbase facilitator) and merged across
+            adapters. Always present; empty when no source has published
+            a chain list for this service.
+          items:
+            type: string
+          type: array
+        currency:
+          default: USD
+          type: string
+        description:
+          type: string
+        docsUrl:
+          type: string
+        endpoint:
+          type: string
+        fairPrice:
+          $ref: '#/components/schemas/FairPriceSummary'
+        firstSeenAt:
+          format: date-time
+          type: string
+        homepage:
+          type: string
+        lastObservationAt:
+          description: |
+            Alias for `lastObservedAt`: the timestamp of the most recent
+            price observation recorded for this service.
+          format: date-time
+          type: string
+        lastObservedAt:
+          format: date-time
+          type: string
+        logoUrl:
+          type: string
+        name:
+          type: string
+        primaryUnit:
+          $ref: '#/components/schemas/PricingUnit'
+        protocol:
+          enum:
+            - x402
+            - mpp
+            - both
+          type: string
+        slug:
+          type: string
+        stalenessSeconds:
+          description: |
+            Seconds elapsed since the most recent observation, computed at
+            response time. Omitted when no observations have been recorded.
+          type: integer
+        status:
+          enum:
+            - live
+            - beta
+            - deprecated
+            - unknown
+          type: string
+        vendor:
+          type: string
+      required:
+        - slug
+        - name
+        - vendor
+        - protocol
+        - category
+        - primaryUnit
+        - currency
+        - status
+      type: object
+    ServiceDetail:
+      allOf:
+        - $ref: '#/components/schemas/Service'
+        - properties:
+            endpoints:
+              description: |
+                Concrete priced endpoints sourced from public scanners
+                (x402scan / agentic.market). Each entry is a (method,
+                path, price, currency, network) tuple representing one
+                paid surface the vendor exposes. Empty when no source
+                has published per-endpoint pricing.
+              items:
+                $ref: '#/components/schemas/ServiceEndpointEntry'
+              type: array
+            related:
+              items:
+                $ref: '#/components/schemas/Service'
+              type: array
+            sources:
+              items:
+                $ref: '#/components/schemas/SourceRef'
+              type: array
+            units:
+              items:
+                $ref: '#/components/schemas/PricingUnit'
+              type: array
+          type: object
+    ServiceEndpointEntry:
+      properties:
+        address:
+          description: Settlement address claimed by the catalog
+          type: string
+        currency:
+          type: string
+        method:
+          description: HTTP method, upper-case
+          type: string
+        network:
+          description: Settlement network for this endpoint
+          type: string
+        path:
+          type: string
+        priceMicros:
+          format: int64
+          type: integer
+      required:
+        - path
+      type: object
+    ServiceList:
+      properties:
+        hiddenByFreshness:
+          description: |
+            Number of services that match the other filters but were excluded
+            by `maxStalenessHours`. Present only when `maxStalenessHours` is
+            supplied; lets clients display a "hiding N stale services" hint
+            without issuing a second unfiltered request.
+          type: integer
+        items:
+          items:
+            $ref: '#/components/schemas/Service'
+          type: array
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+      required:
+        - items
+        - total
+        - limit
+        - offset
+      type: object
+    ServiceOwner:
+      properties:
+        domain:
+          type: string
+        expiringAt:
+          description: End of the 7-day grace window before status flips to `expired`.
+          format: date-time
+          nullable: true
+          type: string
+        lastReverifiedAt:
+          format: date-time
+          nullable: true
+          type: string
+        slug:
+          type: string
+        status:
+          enum:
+            - pending
+            - verified
+            - expired
+            - revoked
+          type: string
+        txtRecord:
+          properties:
+            host:
+              type: string
+            value:
+              type: string
+          required:
+            - host
+            - value
+          type: object
+        vendorKeyId:
+          description: Short fingerprint of the vendor key (vendor-<12 hex>).
+          type: string
+        vendorPubkeyHex:
+          description: Raw 32-byte Ed25519 public key, hex-encoded.
+          type: string
+        verificationMethod:
+          enum:
+            - dns-txt
+          type: string
+        verifiedAt:
+          format: date-time
+          nullable: true
+          type: string
+      required:
+        - slug
+        - domain
+        - vendorKeyId
+        - vendorPubkeyHex
+        - status
+        - verificationMethod
+        - txtRecord
+      type: object
+    SignedObservationInput:
+      properties:
+        amountMicros:
+          format: int64
+          minimum: 1
+          type: integer
+        claimedAt:
+          format: date-time
+          type: string
+        currency:
+          default: USD
+          type: string
+        notes:
+          maxLength: 600
+          type: string
+        serviceSlug:
+          type: string
+        signature:
+          description: Base64-encoded Ed25519 signature over the JCS canonical bytes.
+          type: string
+        unitCode:
+          type: string
+        windowEnd:
+          format: date-time
+          type: string
+        windowStart:
+          format: date-time
+          type: string
+      required:
+        - serviceSlug
+        - unitCode
+        - amountMicros
+        - currency
+        - claimedAt
+        - signature
+      type: object
+    SourceRef:
+      properties:
+        kind:
+          enum:
+            - discovery
+            - catalog
+            - docs
+            - probe
+            - report
+          type: string
+        name:
+          type: string
+        url:
+          type: string
+      required:
+        - name
+        - url
+      type: object
+    TickerRow:
+      properties:
+        change24hPct:
+          description: |
+            24h percentage change. `null` when we don't have a comparison
+            observation in the prior 24h window yet · clients should render
+            "·" rather than a fake-precise 0.00%.
+          nullable: true
+          type: number
+        currency:
+          type: string
+        fmvMicros:
+          format: int64
+          type: integer
+        lastMicros:
+          format: int64
+          type: integer
+        observedAt:
+          format: date-time
+          type: string
+        protocol:
+          enum:
+            - x402
+            - mpp
+            - both
+          type: string
+        serviceName:
+          type: string
+        serviceSlug:
+          type: string
+        unitCode:
+          type: string
+        vendor:
+          type: string
+        verdict:
+          enum:
+            - green
+            - amber
+            - red
+          type: string
+      required:
+        - serviceSlug
+        - serviceName
+        - vendor
+        - protocol
+        - unitCode
+        - fmvMicros
+        - currency
+        - observedAt
+      type: object
+    VendorObservation:
+      properties:
+        amountMicros:
+          format: int64
+          type: integer
+        claimedAt:
+          format: date-time
+          type: string
+        currency:
+          type: string
+        id:
+          type: string
+        ingestedAt:
+          format: date-time
+          type: string
+        notes:
+          nullable: true
+          type: string
+        serviceSlug:
+          type: string
+        unitCode:
+          type: string
+        vendorKeyId:
+          type: string
+        windowEnd:
+          format: date-time
+          nullable: true
+          type: string
+        windowStart:
+          format: date-time
+          nullable: true
+          type: string
+      required:
+        - id
+        - serviceSlug
+        - unitCode
+        - amountMicros
+        - currency
+        - vendorKeyId
+        - claimedAt
+        - ingestedAt
+      type: object

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "io.github.Antmanbuilds/ari-mcp-py",
+  "description": "Python MCP server for ARI · live fair-market-value lookups, leaderboards, and Ed25519 signed-receipt verification for x402/MPP services. Same tool surface as the Node package, for Python-native agents.",
+  "status": "active",
+  "repository": {
+    "url": "https://github.com/Antmanbuilds/ARI",
+    "source": "github",
+    "subfolder": "packages/ari-mcp-py"
+  },
+  "version": "0.1.2",
+  "websiteUrl": "https://agentrateindicators.com/docs/mcp",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "registryBaseUrl": "https://pypi.org",
+      "identifier": "ari-mcp",
+      "version": "0.1.2",
+      "transport": { "type": "stdio" },
+      "runtimeHint": "uvx",
+      "environmentVariables": [
+        {
+          "name": "ARI_BASE_URL",
+          "description": "Override the ARI API base URL. Defaults to https://agentrateindicators.com/api.",
+          "isRequired": false,
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}
