@@ -8,14 +8,14 @@
     "source": "github",
     "subfolder": "packages/ari-mcp-ts"
   },
-  "version": "0.1.2",
+  "version": "0.1.3",
   "websiteUrl": "https://agentrateindicators.com/docs/mcp",
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "ari-mcp",
-      "version": "0.1.2",
+      "version": "0.1.3",
       "transport": { "type": "stdio" },
       "runtimeHint": "npx",
       "environmentVariables": [

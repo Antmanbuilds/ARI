@@ -5,7 +5,7 @@ info:
     Public read-only HTTP API for ARI. Every JSON response on `/api/*` is signed with an Ed25519 receipt · see
     `spec/signed-receipts.md` for the wire format and `spec/verification.md` for a step-by-step verifier. The reference
     MCP clients (`ari-mcp` on npm and `ari-mcp-py` on PyPI) wrap these endpoints as tools any MCP-aware agent can call.
-  version: 0.1.2
+  version: 0.1.3
   license:
     name: Apache-2.0
     url: https://www.apache.org/licenses/LICENSE-2.0

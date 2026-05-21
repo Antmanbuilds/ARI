@@ -122,7 +122,7 @@ class AriClient:
         url = self.base_url + (path if path.startswith("/") else "/" + path)
         headers = {
             "Accept": "application/json",
-            "User-Agent": "ari-mcp/0.1.2 (python)",
+            "User-Agent": "ari-mcp/0.1.3 (python)",
         }
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"

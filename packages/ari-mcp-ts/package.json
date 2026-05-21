@@ -1,6 +1,7 @@
 {
   "name": "ari-mcp",
-  "version": "0.1.2",
+  "version": "0.1.3",
+  "mcpName": "io.github.Antmanbuilds/ari-mcp",
   "description": "MCP server for ARI (Agentic Rate Indicators). Gives any MCP-aware agent (Claude Desktop, Cursor, Continue, Windsurf, Zed, ChatGPT desktop, Gemini CLI) live fair-market-value lookups, leaderboards, and signed-receipt verification for x402/MPP services.",
   "license": "Apache-2.0",
   "type": "module",

@@ -2,6 +2,17 @@
 
 All notable changes to the ARI MCP clients are documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] · 2026-05-21
+
+### Fixed
+
+- Added the top-level `mcpName` field to `ari-mcp`'s npm `package.json` so the public MCP registry accepts the npm package as the canonical source for `io.github.Antmanbuilds/ari-mcp`
+- Added the `mcp-name: io.github.Antmanbuilds/ari-mcp-py` marker line to `ari-mcp-py`'s PyPI `README.md` so the registry accepts the PyPI package as the canonical source for `io.github.Antmanbuilds/ari-mcp-py`
+
+### Changed
+
+- Bumped both `ari-mcp` (npm) and `ari-mcp-py` (PyPI) to 0.1.3 with matching `server.json` entries so the registry submission resolves cleanly
+
 ## [0.1.2] · 2026-05-21
 
 ### Changed
@@ -41,6 +52,7 @@ All notable changes to the ARI MCP clients are documented in this file. The form
 - Both stdio and streamable-HTTP transports
 - `ari-mcp install` command that prints a host-specific config snippet for Claude Desktop, Cursor, Continue, Windsurf, Zed, ChatGPT desktop, and Gemini CLI
 
+[0.1.3]: https://github.com/Antmanbuilds/ARI/releases/tag/v0.1.3
 [0.1.2]: https://github.com/Antmanbuilds/ARI/releases/tag/v0.1.2
 [0.1.1]: https://github.com/Antmanbuilds/ARI/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Antmanbuilds/ARI/releases/tag/v0.1.0

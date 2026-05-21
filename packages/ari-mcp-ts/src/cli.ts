@@ -202,7 +202,7 @@ async function pingInstall(baseUrl?: string): Promise<void> {
       body: JSON.stringify({
         install_id: installId,
         kind: "ts",
-        version: "0.1.2",
+        version: "0.1.3",
       }),
     });
     if (!res.ok) {
@@ -234,7 +234,7 @@ async function main(): Promise<void> {
       process.stdout.write(HELP);
       return;
     case "version":
-      process.stdout.write("0.1.2\n");
+      process.stdout.write("0.1.3\n");
       return;
     case "install":
       printInstall(cli.client, cli.baseUrl);

@@ -1,3 +1,5 @@
+<!-- mcp-name: io.github.Antmanbuilds/ari-mcp-py -->
+
 # ari-mcp-py · Python MCP server for ARI
 
 [![PyPI version](https://img.shields.io/pypi/v/ari-mcp-py.svg)](https://pypi.org/project/ari-mcp-py/)

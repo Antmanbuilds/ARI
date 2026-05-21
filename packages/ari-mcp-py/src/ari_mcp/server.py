@@ -27,7 +27,7 @@ from .client import AriClient, AriHttpError, AriReceiptError
 from .tools import TOOLS
 
 SERVER_NAME = "ari-mcp"
-SERVER_VERSION = "0.1.2"
+SERVER_VERSION = "0.1.3"
 
 
 def _format_tool_error(err: Exception) -> str:

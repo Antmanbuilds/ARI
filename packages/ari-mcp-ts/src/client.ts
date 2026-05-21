@@ -122,7 +122,7 @@ export class AriClient {
     const url = this.baseUrl + (path.startsWith("/") ? path : "/" + path);
     const headers = new Headers(init.headers ?? {});
     headers.set("Accept", "application/json");
-    headers.set("User-Agent", "ari-mcp/0.1.2");
+    headers.set("User-Agent", "ari-mcp/0.1.3");
     if (this.apiKey) headers.set("Authorization", `Bearer ${this.apiKey}`);
 
     const res = await this.fetchImpl(url, { ...init, headers });

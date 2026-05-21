@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ari-mcp-py"
-version = "0.1.2"
+version = "0.1.3"
 description = "MCP server for ARI (Agentic Rate Indicators). Live fair-market-value lookups, leaderboards, and signed-receipt verification for x402/MPP services · usable from any MCP-aware agent (Claude Desktop, Cursor, Continue, Windsurf, Zed, ChatGPT desktop, Gemini CLI)."
 readme = "README.md"
 requires-python = ">=3.10"

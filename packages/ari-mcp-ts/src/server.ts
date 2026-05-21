@@ -27,7 +27,7 @@ import { AriClient, AriHttpError, AriReceiptError } from "./client.js";
 import { TOOLS, type ToolDef } from "./tools/index.js";
 import { zodToJsonSchema } from "./jsonschema.js";
 
-export const SERVER_VERSION = "0.1.2";
+export const SERVER_VERSION = "0.1.3";
 
 export interface CreateServerOptions {
   baseUrl?: string;
