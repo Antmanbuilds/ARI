@@ -101,7 +101,12 @@ describe("honest-null contract · is_fair_price", () => {
 });
 
 describe("honest-null contract · refuse_if_overpriced", () => {
-  it("returns should_pay: null (not true/false) when no FMV baseline exists", async () => {
+  it("returns should_pay: false (strict boolean fail-closed) when no FMV baseline exists", async () => {
+    // Task #437 round-3 · the contract is now a STRICT boolean. Every
+    // path that isn't an explicit green/fair on a usable baseline MUST
+    // return false so an agent that branches on `should_pay !== false`
+    // cannot AUTO-PAY when ARI couldn't decide. The `reason` field
+    // still surfaces why so callers can fall back to their own policy.
     const client = makeClient(async () =>
       ok({
         verdict: { label: "unknown", deltaPct: null },
@@ -114,9 +119,8 @@ describe("honest-null contract · refuse_if_overpriced", () => {
     )) as Record<string, unknown>;
     assert.equal(
       result["should_pay"],
-      null,
-      "should_pay must be null when there is no baseline · never true and never false, " +
-        "because either would falsely encode certainty",
+      false,
+      "should_pay must be the boolean false when there is no baseline · fail-closed contract",
     );
     assert.equal(result["verdict"], "unknown");
     assert.equal(result["fmv_usd"], null);
@@ -124,8 +128,186 @@ describe("honest-null contract · refuse_if_overpriced", () => {
     assert.equal(result["savings_estimate_usd"], null);
     assert.ok(
       typeof result["reason"] === "string" && (result["reason"] as string).length > 0,
-      "reason string must explain why no decision was made",
+      "reason string must explain why the tool refused",
     );
+  });
+
+  it("returns should_pay: false (refuse) on amber · fails closed, not open", async () => {
+    // Task #437 regression · the prior implementation used
+    // `verdict !== "red"`, which silently auto-settled amber quotes.
+    const client = makeClient(async () =>
+      ok({
+        verdict: { label: "amber", deltaPct: 18 },
+        fmvMicros: 1_000_000,
+        lowMicros: 800_000,
+        highMicros: 1_200_000,
+        sampleSize: 12,
+      }) as AriResponse<unknown>,
+    );
+    const result = (await tool("refuse_if_overpriced").run(
+      { slug: "acme-llm", amount_usd: 1.15 },
+      client,
+    )) as Record<string, unknown>;
+    assert.equal(result["should_pay"], false, "amber must refuse, not pay");
+    assert.equal(result["verdict"], "amber");
+    assert.ok(
+      typeof result["reason"] === "string" && (result["reason"] as string).length > 0,
+    );
+  });
+
+  it("signing input: Ari-Schedule-Proof appended in the right slot when present, skipped when absent", async () => {
+    // Task #437 cross-language regression · the MCP TS/Py canonical
+    // mirrors previously omitted Ari-Schedule-Proof from the
+    // SIGNED_HEADER_NAMES list, so any receipt that carried the header
+    // would verify against the wrong bytes. This test pins the order
+    // (License, Content-Type, Ari-Signed-At, Ari-Key-Id, Ari-Receipt-Id,
+    // Ari-Schedule-Proof) and confirms absent values are skipped.
+    const { composeSigningInput, SIGNED_HEADER_NAMES } = await import("../src/canonical.js");
+    // Task #535 · v3 added Ari-Confidence and Ari-Fmv-Source to the
+    // signed preamble for fair-price (category-median fallback). Verifiers
+    // MUST include them in the canonicalization order or every signed
+    // fair-price receipt will appear to have a bad signature.
+    assert.deepEqual(
+      [...SIGNED_HEADER_NAMES],
+      [
+        "License",
+        "Content-Type",
+        "Ari-Signed-At",
+        "Ari-Key-Id",
+        "Ari-Receipt-Id",
+        "Ari-Schedule-Proof",
+        "Ari-Confidence",
+        "Ari-Fmv-Source",
+      ],
+    );
+    const withProof = composeSigningInput("{}", {
+      License: "BUSL-1.1",
+      "Content-Type": "application/json",
+      "Ari-Signed-At": "2026-01-01T00:00:00Z",
+      "Ari-Key-Id": "kid-1",
+      "Ari-Receipt-Id": "01HZ",
+      "Ari-Schedule-Proof": "proof-abc",
+    });
+    assert.equal(
+      withProof,
+      "{}\nLicense: BUSL-1.1\nContent-Type: application/json\n" +
+        "Ari-Signed-At: 2026-01-01T00:00:00Z\nAri-Key-Id: kid-1\n" +
+        "Ari-Receipt-Id: 01HZ\nAri-Schedule-Proof: proof-abc",
+    );
+    const withoutProof = composeSigningInput("{}", {
+      License: "BUSL-1.1",
+      "Content-Type": "application/json",
+      "Ari-Signed-At": "2026-01-01T00:00:00Z",
+      "Ari-Key-Id": "kid-1",
+      "Ari-Receipt-Id": "01HZ",
+    });
+    assert.ok(
+      !withoutProof.includes("Ari-Schedule-Proof"),
+      "absent Ari-Schedule-Proof must be skipped, not emitted with empty value",
+    );
+  });
+
+  it("verifier: refuses when required headers are missing (fails closed, no math runs)", async () => {
+    // Task #437 regression · the prior implementation would happily compute
+    // a signing input over an empty preamble and report valid:true if the
+    // math happened to work. The hardened verifier refuses to even attempt
+    // verification when any of Ari-Key-Id/Ari-Receipt-Id/Ari-Signed-At/
+    // Ari-Signature are absent.
+    const { verifyReceipt } = await import("../src/verify.js");
+    const fakePem =
+      "-----BEGIN PUBLIC KEY-----\n" +
+      "MCowBQYDK2VwAyEAkvPU1HujL+OSz3DyLaVpWh0ae0qffvEDK0wZ+iChdr0=\n" +
+      "-----END PUBLIC KEY-----\n";
+    const result = await verifyReceipt("{}", {}, fakePem);
+    assert.equal(result.valid, false, "missing required headers must fail closed");
+    assert.ok(
+      result.errors.some((e) => e.includes("receipt headers missing")),
+      `expected explicit missing-headers error, got: ${result.errors.join(" | ")}`,
+    );
+    for (const h of ["Ari-Key-Id", "Ari-Receipt-Id", "Ari-Signed-At", "Ari-Signature"]) {
+      assert.ok(
+        result.errors.join(" | ").includes(h),
+        `expected ${h} in error list, got: ${result.errors.join(" | ")}`,
+      );
+    }
+  });
+
+  it("schema: get_leaderboard defaults `kind` to most_observed when omitted", () => {
+    // Task #437 schema reconciliation · spec lists `kind` as optional.
+    const t = tool("get_leaderboard");
+    const parsed = (t.inputSchema as unknown as { parse: (x: unknown) => { kind: string; limit: number } }).parse({});
+    assert.equal(parsed.kind, "most_observed");
+    assert.equal(parsed.limit, 10);
+  });
+
+  it("schema: get_signed_receipt accepts receipt_id (spec) and for_request_id (legacy)", () => {
+    const t = tool("get_signed_receipt");
+    const schema = t.inputSchema as unknown as {
+      parse: (x: unknown) => Record<string, unknown>;
+      safeParse: (x: unknown) => { success: boolean };
+    };
+    assert.doesNotThrow(() => schema.parse({ receipt_id: "01HZNEW" }));
+    assert.doesNotThrow(() => schema.parse({ for_request_id: "01HZOLD" }));
+    assert.equal(
+      schema.safeParse({}).success,
+      false,
+      "must reject payloads with neither identifier",
+    );
+  });
+
+  it("schema: subscribe_alert rejects payloads with neither webhook nor email", () => {
+    const schema = tool("subscribe_alert").inputSchema as unknown as {
+      safeParse: (x: unknown) => { success: boolean };
+    };
+    assert.equal(
+      schema.safeParse({ slug: "x", condition: "above", threshold: 1 }).success,
+      false,
+    );
+    assert.equal(
+      schema.safeParse({
+        slug: "x",
+        condition: "above",
+        threshold: 1,
+        webhook: "https://example.com/wh",
+        email: "ops@example.com",
+      }).success,
+      false,
+      "must reject payloads with both delivery channels",
+    );
+    assert.equal(
+      schema.safeParse({
+        slug: "x",
+        condition: "above",
+        threshold: 1,
+        webhook_url: "https://example.com/wh",
+      }).success,
+      true,
+      "must accept the webhook_url alias",
+    );
+  });
+
+  it("returns should_pay: false (strict boolean fail-closed) when the verdict label is unrecognised", async () => {
+    // Forward-compat: if the server invents a new verdict label, the MCP
+    // tool MUST NOT default to should_pay:true.
+    const client = makeClient(async () =>
+      ok({
+        verdict: { label: "experimental_new_label", deltaPct: 0 },
+        fmvMicros: 1_000_000,
+        lowMicros: 800_000,
+        highMicros: 1_200_000,
+        sampleSize: 42,
+      }) as AriResponse<unknown>,
+    );
+    const result = (await tool("refuse_if_overpriced").run(
+      { slug: "acme-llm", amount_usd: 1.0 },
+      client,
+    )) as Record<string, unknown>;
+    assert.equal(
+      result["should_pay"],
+      false,
+      "unrecognised verdict labels must fail closed (false), never auto-pay",
+    );
+    assert.equal(result["verdict"], "experimental_new_label");
   });
 
   it("still returns a real decision when the API does have a baseline", async () => {

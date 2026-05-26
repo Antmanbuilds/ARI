@@ -16,9 +16,11 @@
 //   --insecure-skip-verify  Skip receipt signature checks (NOT FOR PROD)
 
 import { runStdio, runHttp } from "./server.js";
+import { VERSION } from "./version.js";
+import { AriClient, AriReceiptError, AriHttpError } from "./client.js";
 
 interface Cli {
-  command: "serve" | "install" | "ping" | "version" | "help";
+  command: "serve" | "install" | "ping" | "version" | "help" | "verify-receipt";
   baseUrl?: string;
   apiKey?: string;
   insecureSkipVerify?: boolean;
@@ -27,6 +29,12 @@ interface Cli {
   transport?: "stdio" | "http";
   port?: number;
   host?: string;
+  /** Service slug for `verify-receipt`. */
+  service?: string;
+  /** Quoted price for `verify-receipt`. Defaults to 1. */
+  price?: number;
+  /** Quoted currency for `verify-receipt`. Defaults to USD. */
+  currency?: string;
 }
 
 function parseArgs(argv: string[]): Cli {
@@ -68,6 +76,18 @@ function parseArgs(argv: string[]): Cli {
       out.host = arg.slice("--host=".length);
     } else if (arg === "--client") {
       out.client = argv[++i];
+    } else if (arg === "--service") {
+      out.service = argv[++i];
+    } else if (arg.startsWith("--service=")) {
+      out.service = arg.slice("--service=".length);
+    } else if (arg === "--price") {
+      out.price = Number(argv[++i]);
+    } else if (arg.startsWith("--price=")) {
+      out.price = Number(arg.slice("--price=".length));
+    } else if (arg === "--currency") {
+      out.currency = argv[++i];
+    } else if (arg.startsWith("--currency=")) {
+      out.currency = arg.slice("--currency=".length);
     } else if (arg === "--help" || arg === "-h") {
       out.command = "help";
     } else if (arg === "--version" || arg === "-v") {
@@ -84,6 +104,7 @@ function parseArgs(argv: string[]): Cli {
     else if (positional[0] === "ping") out.command = "ping";
     else if (positional[0] === "help") out.command = "help";
     else if (positional[0] === "version") out.command = "version";
+    else if (positional[0] === "verify-receipt") out.command = "verify-receipt";
     else out.command = "serve";
   }
   return out;
@@ -95,6 +116,11 @@ USAGE
   ari-mcp [serve]            Start the MCP stdio server (default).
   ari-mcp install            Print install snippets for popular MCP hosts.
   ari-mcp ping               Send a one-shot opt-in install ping.
+  ari-mcp verify-receipt     Fetch a signed fair-price receipt for a
+                             service and verify it end-to-end against
+                             the embedded publisher key. Exits 0 on
+                             success, 1 on failure. Useful as a
+                             post-install smoke test.
   ari-mcp --version          Print the server version.
 
 OPTIONS
@@ -106,6 +132,10 @@ OPTIONS
   --insecure-skip-verify     Skip Ed25519 receipt verification.
   --insecure-skip-pin        Skip the build-time key-id pin (allow rotation).
   --client NAME              For 'install', print only the snippet for one host.
+  --service SLUG             For 'verify-receipt', service to fetch a
+                             receipt for. Default: ari-test-no-data-xyz.
+  --price N                  For 'verify-receipt', quoted price. Default: 1.
+  --currency CODE            For 'verify-receipt', quoted currency. Default: USD.
 
 DOCS
   https://agentrateindicators.com/docs/mcp
@@ -202,7 +232,7 @@ async function pingInstall(baseUrl?: string): Promise<void> {
       body: JSON.stringify({
         install_id: installId,
         kind: "ts",
-        version: "0.1.3",
+        version: VERSION,
       }),
     });
     if (!res.ok) {
@@ -234,7 +264,10 @@ async function main(): Promise<void> {
       process.stdout.write(HELP);
       return;
     case "version":
-      process.stdout.write("0.1.3\n");
+      process.stdout.write(`${VERSION}\n`);
+      return;
+    case "verify-receipt":
+      await runVerifyReceipt(cli);
       return;
     case "install":
       printInstall(cli.client, cli.baseUrl);
@@ -262,6 +295,68 @@ async function main(): Promise<void> {
       await runStdio(opts);
       return;
     }
+  }
+}
+
+/**
+ * Run `ari-mcp verify-receipt` · fetch a signed fair-price receipt and
+ * verify it end-to-end. AriClient throws AriReceiptError on signature
+ * mismatch, pinned-key-id mismatch, missing headers, or canonical-hash
+ * mismatch, so "did not throw" ≡ "receipt verified". We surface
+ * receipt-id / key-id / signed-at on success so the operator can grep
+ * server logs for the same receipt id.
+ */
+async function runVerifyReceipt(cli: Cli): Promise<void> {
+  const service = cli.service ?? "ari-test-no-data-xyz";
+  const price = cli.price ?? 1;
+  const currency = (cli.currency ?? "USD").toUpperCase();
+  const opts: ConstructorParameters<typeof AriClient>[0] = {};
+  if (cli.baseUrl !== undefined) opts.baseUrl = cli.baseUrl;
+  if (cli.apiKey !== undefined) opts.apiKey = cli.apiKey;
+  if (cli.insecureSkipVerify !== undefined)
+    opts.insecureSkipVerify = cli.insecureSkipVerify;
+  if (cli.insecureSkipPin !== undefined)
+    opts.insecureSkipPin = cli.insecureSkipPin;
+
+  const client = new AriClient(opts);
+  const params = new URLSearchParams({
+    service,
+    price: String(price),
+    currency,
+  });
+  const path = `/api/v1/fair-price?${params.toString()}`;
+
+  try {
+    const r = await client.request<unknown>(path);
+    process.stdout.write(
+      `PASS · receipt verified end-to-end\n` +
+        `  service     = ${service}\n` +
+        `  quoted      = ${price} ${currency}\n` +
+        `  endpoint    = ${path}\n` +
+        `  receipt_id  = ${r.receiptId ?? "(missing)"}\n` +
+        `  key_id      = ${r.keyId ?? "(missing)"}\n` +
+        `  signed_at   = ${r.signedAt ?? "(missing)"}\n` +
+        `  canonical_hash = ${r.canonicalHash ?? "(missing)"}\n`,
+    );
+  } catch (err: unknown) {
+    if (err instanceof AriReceiptError) {
+      process.stderr.write(
+        `FAIL · receipt verification rejected by client:\n` +
+          err.errors.map((e) => `  · ${e}\n`).join("") +
+          `  url = ${err.url}\n`,
+      );
+      process.exit(1);
+    }
+    if (err instanceof AriHttpError) {
+      process.stderr.write(
+        `FAIL · HTTP ${err.status} from ${err.url} · ${err.message}\n`,
+      );
+      process.exit(1);
+    }
+    process.stderr.write(
+      `FAIL · ${err instanceof Error ? err.stack ?? err.message : String(err)}\n`,
+    );
+    process.exit(1);
   }
 }
 

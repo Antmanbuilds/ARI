@@ -10,7 +10,12 @@ import sys
 from typing import Sequence
 
 from . import __version__
-from .client import DEFAULT_API_BASE_URL, AriClient
+from .client import (
+    DEFAULT_API_BASE_URL,
+    AriClient,
+    AriHttpError,
+    AriReceiptError,
+)
 from .server import run_http, run_stdio
 
 
@@ -85,6 +90,55 @@ def cmd_ping(args: argparse.Namespace) -> int:
         return 1
 
 
+def cmd_verify_receipt(args: argparse.Namespace) -> int:
+    """``ari-mcp verify-receipt`` · fetch a signed fair-price receipt and
+    verify it end-to-end. ``AriClient`` raises ``AriReceiptError`` on
+    signature/pin/hash failure, so "did not raise" ≡ "receipt verified".
+    Surfaces receipt-id / key-id / signed-at on success so the operator
+    can grep server logs for the same receipt id.
+    """
+    kwargs: dict = {}
+    if args.api_base_url:
+        kwargs["base_url"] = args.api_base_url
+    if args.api_key:
+        kwargs["api_key"] = args.api_key
+    if args.insecure_skip_verify:
+        kwargs["insecure_skip_verify"] = True
+    if args.insecure_skip_pin:
+        kwargs["insecure_skip_pin"] = True
+    client = AriClient(**kwargs)
+    path = "/api/v1/fair-price"
+    params = {"service": args.service, "price": args.price, "currency": args.currency.upper()}
+    try:
+        r = client.request(path, method="GET", params=params)
+    except AriReceiptError as e:
+        sys.stderr.write(
+            "FAIL · receipt verification rejected by client:\n"
+            + "".join(f"  · {x}\n" for x in e.errors)
+            + f"  url = {e.url}\n"
+        )
+        return 1
+    except AriHttpError as e:
+        sys.stderr.write(
+            f"FAIL · HTTP {e.status} from {e.url} · {e}\n"
+        )
+        return 1
+    except Exception as e:  # noqa: BLE001
+        sys.stderr.write(f"FAIL · {e}\n")
+        return 1
+    sys.stdout.write(
+        "PASS · receipt verified end-to-end\n"
+        f"  service     = {args.service}\n"
+        f"  quoted      = {args.price} {args.currency.upper()}\n"
+        f"  endpoint    = {path}?service={args.service}&price={args.price}&currency={args.currency.upper()}\n"
+        f"  receipt_id  = {r.receipt_id or '(missing)'}\n"
+        f"  key_id      = {r.key_id or '(missing)'}\n"
+        f"  signed_at   = {r.signed_at or '(missing)'}\n"
+        f"  canonical_hash = {r.canonical_hash or '(missing)'}\n"
+    )
+    return 0
+
+
 def cmd_serve(args: argparse.Namespace) -> int:
     if args.transport == "http":
         asyncio.run(
@@ -138,12 +192,25 @@ def main(argv: Sequence[str] | None = None) -> int:
     inst.add_argument("--client", default=None, help="Print only one host's snippet.")
     ping = sub.add_parser("ping", help="Send an opt-in install ping.")
     ping.add_argument("--client", default=None)
+    vr = sub.add_parser(
+        "verify-receipt",
+        help=(
+            "Fetch a signed fair-price receipt and verify it end-to-end "
+            "against the embedded publisher key. Exits 0 on success, 1 "
+            "on failure. Useful as a post-install smoke test."
+        ),
+    )
+    vr.add_argument("--service", default="ari-test-no-data-xyz")
+    vr.add_argument("--price", type=float, default=1.0)
+    vr.add_argument("--currency", default="USD")
 
     args = p.parse_args(argv)
     if args.command == "install":
         return cmd_install(args)
     if args.command == "ping":
         return cmd_ping(args)
+    if args.command == "verify-receipt":
+        return cmd_verify_receipt(args)
     return cmd_serve(args)
 
 

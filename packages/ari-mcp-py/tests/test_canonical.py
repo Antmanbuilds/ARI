@@ -61,12 +61,20 @@ def test_compose_signing_input_skips_missing_headers():
 
 
 def test_signed_header_names_order_is_locked():
+    # Task #437 · canonical order updated to mirror the server's
+    # SIGNED_HEADER_NAMES (artifacts/api-server/src/lib/canonical.ts),
+    # which now includes the optional sixth header Ari-Schedule-Proof.
     assert SIGNED_HEADER_NAMES == (
         "License",
         "Content-Type",
         "Ari-Signed-At",
         "Ari-Key-Id",
         "Ari-Receipt-Id",
+        "Ari-Schedule-Proof",
+        # Task #489 / #535 · v3 signed-preamble fields (confidence-tiered
+        # verdicts). Optional · absent on non-fair-price routes.
+        "Ari-Confidence",
+        "Ari-Fmv-Source",
     )
 
 

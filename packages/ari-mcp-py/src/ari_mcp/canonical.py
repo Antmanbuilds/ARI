@@ -13,12 +13,27 @@ import re
 import unicodedata
 from typing import Any, Mapping, Sequence
 
+# Task #437 · MUST mirror SIGNED_HEADER_NAMES in
+# artifacts/api-server/src/lib/canonical.ts and the TS MCP mirror at
+# tools/ari-mcp-ts/src/canonical.ts. compose_signing_input only appends
+# headers that are present on the response, so listing a header the
+# server didn't emit is safe (skipped). Listing too few means receipts
+# that include the missing header silently fail verification.
+# `Ari-Schedule-Proof` is emitted only by the observations route and is
+# signed there, so verifiers that omit it from this list silently fail
+# on every observations response.
 SIGNED_HEADER_NAMES: Sequence[str] = (
     "License",
     "Content-Type",
     "Ari-Signed-At",
     "Ari-Key-Id",
     "Ari-Receipt-Id",
+    "Ari-Schedule-Proof",
+    # Task #489 (ari-receipts-v3) · confidence-tiered verdicts. Absent on
+    # v2 receipts (skipped by compose_signing_input), so adding them here
+    # is byte-compatible with every v2 receipt still in circulation.
+    "Ari-Confidence",
+    "Ari-Fmv-Source",
 )
 
 _MAX_SAFE_INTEGER = (1 << 53) - 1
@@ -26,6 +41,10 @@ _MAX_SAFE_INTEGER = (1 << 53) - 1
 RECEIPT_SIGNING_INPUT_PREFIX_V2 = "ari-receipts-v1\n"
 RECEIPT_SPEC_HEADER_V1 = "ari-receipts/v1"
 RECEIPT_SPEC_HEADER_V2 = "ari-receipts-v2"
+# Task #489 · v3 reuses the v2 composition algorithm; the spec header
+# just advertises that the receipt MAY carry Ari-Confidence /
+# Ari-Fmv-Source in its signed preamble.
+RECEIPT_SPEC_HEADER_V3 = "ari-receipts-v3"
 
 _COMBINING_MARK_RE = re.compile(r"[\u0300-\u036f]")
 

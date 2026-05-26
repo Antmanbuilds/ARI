@@ -78,12 +78,28 @@ export function jcs(value: unknown): string {
   throw new Error(`JCS: cannot serialize value of type ${typeof value}`);
 }
 
+// Task #437 · MUST mirror SIGNED_HEADER_NAMES in
+// artifacts/api-server/src/lib/canonical.ts AND
+// tools/ari-mcp-py/src/ari_mcp/canonical.py. composeSigningInput only
+// appends headers that are present on the response, so listing a header
+// that the server didn't emit is safe (it's skipped). Listing too few,
+// however, means receipts that include the missing header will fail
+// verification with a confusing "signature mismatch" instead of the real
+// cause. `Ari-Schedule-Proof` is emitted only by the observations route
+// and is signed there, so verifiers that omit it from this list silently
+// fail on every observations response.
 export const SIGNED_HEADER_NAMES = [
   "License",
   "Content-Type",
   "Ari-Signed-At",
   "Ari-Key-Id",
   "Ari-Receipt-Id",
+  "Ari-Schedule-Proof",
+  // Task #489 · ari-receipts-v3. Absent on v2 receipts (skipped by
+  // composeSigningInput), so adding them here is byte-compatible with
+  // every v2 receipt the verifier might still encounter.
+  "Ari-Confidence",
+  "Ari-Fmv-Source",
 ] as const;
 
 export function composeSigningInput(
@@ -106,6 +122,11 @@ export function composeSigningInput(
 export const RECEIPT_SIGNING_INPUT_PREFIX_V2 = "ari-receipts-v1\n";
 export const RECEIPT_SPEC_HEADER_V1 = "ari-receipts/v1";
 export const RECEIPT_SPEC_HEADER_V2 = "ari-receipts-v2";
+// Task #489 · v3 reuses the v2 composition (same prefix, same algorithm)
+// but advertises that the receipt MAY include `Ari-Confidence` /
+// `Ari-Fmv-Source` in its signed preamble. Verifiers that read those
+// fields MUST require this spec header before treating them as signed.
+export const RECEIPT_SPEC_HEADER_V3 = "ari-receipts-v3";
 
 export function composeSigningInputV2(
   canonicalPayload: string,

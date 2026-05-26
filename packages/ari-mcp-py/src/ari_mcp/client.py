@@ -15,6 +15,7 @@ from typing import Any, Mapping
 
 import httpx
 
+from ._version import __version__
 from .embedded_key import (
     ACCEPTED_KEY_IDS,
     EMBEDDED_PUBLIC_KEY_PEM,
@@ -23,6 +24,11 @@ from .embedded_key import (
 from .verify import verify_receipt
 
 DEFAULT_API_BASE_URL = os.environ.get("ARI_API_BASE_URL", PINNED_BASE_URL)
+
+# Task #545 · sourced from importlib.metadata so the wire User-Agent
+# string can never drift from the published tarball version (the old
+# hardcoded "ari-mcp/0.1.3 (python)" survived the 0.2.0 bump unnoticed).
+_USER_AGENT = f"ari-mcp/{__version__} (python)"
 
 
 class AriHttpError(RuntimeError):
@@ -122,7 +128,7 @@ class AriClient:
         url = self.base_url + (path if path.startswith("/") else "/" + path)
         headers = {
             "Accept": "application/json",
-            "User-Agent": "ari-mcp/0.1.3 (python)",
+            "User-Agent": _USER_AGENT,
         }
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
@@ -138,6 +144,7 @@ class AriClient:
         receipt_id = r.headers.get("ari-receipt-id")
         signed_at = r.headers.get("ari-signed-at")
         canonical_hash = r.headers.get("ari-canonical-hash")
+        schedule_proof = r.headers.get("ari-schedule-proof")
 
         if not self.insecure_skip_verify:
             if not signature:

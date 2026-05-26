@@ -4,20 +4,29 @@
 from ari_mcp.tools import TOOLS
 
 
-def test_eleven_tools_with_expected_names():
+def test_twenty_tools_with_expected_names():
     names = sorted(t.name for t in TOOLS)
     assert names == [
+        "category_benchmark",
+        "detect_anomaly",
+        "find_substitutes",
         "get_fmv",
         "get_leaderboard",
         "get_service",
         "get_signed_receipt",
+        "historical_fmv",
         "is_fair_price",
+        "is_fair_price_batch",
         "list_services",
+        "mcp_health_ping",
         "prepay_verdict",
+        "prepay_verdict_batch",
         "recent_observations",
         "refuse_if_overpriced",
+        "smart_route",
         "subscribe_alert",
         "verify_receipt",
+        "why",
     ]
 
 
